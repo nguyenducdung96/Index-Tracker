@@ -432,10 +432,6 @@ function saneNonNegative(value: number | null | undefined) {
   return value != null && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
-function saneNonNegative(value: number | null | undefined) {
-  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
-}
-
 function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote {
   if (!rt) {
     return {
