@@ -80,10 +80,27 @@ function parseSFU(values: string[]): RawRecord {
       "offerPrice06","offerPrice07","offerPrice08","offerPrice09","offerPrice10",
       "offerQtty01","offerQtty02","offerQtty03","offerQtty04","offerQtty05",
       "offerQtty06","offerQtty07","offerQtty08","offerQtty09","offerQtty10",
-      "totalBidQtty","totalOfferQtty","highestPrice","lowestPrice",
-      "accumulatedVal","accumulatedVol","matchPrice","matchQtty","currentPrice",
-      "currentQtty","totalRoom","currentRoom","iNav","underlyingAsset","issuer",
-      "exercisePrice","exerciseRatio","expiryDate","time","bv4","sv4"
+      "totalBidQtty","totalOfferQtty","tradingSessionId",
+      "buyForeignQtty","sellForeignQtty",
+      "highestPrice","lowestPrice","accumulatedVal","accumulatedVol",
+      "matchPrice","matchQtty","currentPrice","currentQtty","projectOpen",
+      "totalRoom","currentRoom"
+    ], values);
+  }
+
+  if (stockType === "W") {
+    return mapFields([
+      "code","stockType","floorCode","basicPrice","floorPrice","ceilingPrice",
+      "underlyingSymbol","issuerName","exercisePrice","exerciseRatio",
+      "bidPrice01","bidPrice02","bidPrice03",
+      "bidQtty01","bidQtty02","bidQtty03",
+      "offerPrice01","offerPrice02","offerPrice03",
+      "offerQtty01","offerQtty02","offerQtty03",
+      "totalBidQtty","totalOfferQtty","tradingSessionId",
+      "buyForeignQtty","sellForeignQtty",
+      "highestPrice","lowestPrice","accumulatedVal","accumulatedVol",
+      "matchPrice","matchQtty","currentPrice","currentQtty","projectOpen",
+      "totalRoom","currentRoom"
     ], values);
   }
 
@@ -94,17 +111,20 @@ function parseSFU(values: string[]): RawRecord {
     "offerPrice01","offerPrice02","offerPrice03",
     "offerQtty01","offerQtty02","offerQtty03",
     "totalBidQtty","totalOfferQtty","tradingSessionId",
-    "buyForeignQtty","sellForeignQtty","highestPrice","lowestPrice",
-    "accumulatedVal","accumulatedVol","matchPrice","matchQtty","currentPrice",
-    "currentQtty","projectOpen","totalRoom","currentRoom","iNav"
+    "buyForeignQtty","sellForeignQtty",
+    "highestPrice","lowestPrice","accumulatedVal","accumulatedVol",
+    "matchPrice","matchQtty","currentPrice","currentQtty","projectOpen",
+    "totalRoom","currentRoom"
   ], values);
 }
 
 function parseSMA(values: string[]): RawRecord {
   return mapFields([
-    "code","stockType","floorCode","buyForeignQtty","sellForeignQtty",
+    "code","stockType","tradingSessionId",
+    "buyForeignQtty","sellForeignQtty",
     "highestPrice","lowestPrice","accumulatedVal","accumulatedVol",
-    "matchPrice","matchQtty","currentPrice","currentQtty","totalRoom","currentRoom"
+    "matchPrice","matchQtty","currentPrice","currentQtty","projectOpen",
+    "totalRoom","currentRoom"
   ], values);
 }
 
@@ -116,9 +136,10 @@ function parseSBS(values: string[]): RawRecord {
 
 function parseSBA(values: string[]): RawRecord {
   const stockType = values[1] ?? "";
+
   if (stockType === "ST") {
     return mapFields([
-      "code","stockType","floorCode",
+      "code","stockType",
       "bidPrice01","bidPrice02","bidPrice03","bidPrice04","bidPrice05",
       "bidPrice06","bidPrice07","bidPrice08","bidPrice09","bidPrice10",
       "bidQtty01","bidQtty02","bidQtty03","bidQtty04","bidQtty05","bidQtty06",
@@ -132,12 +153,12 @@ function parseSBA(values: string[]): RawRecord {
   }
 
   return mapFields([
-    "code","stockType","floorCode",
+    "code","stockType",
     "bidPrice01","bidPrice02","bidPrice03",
     "bidQtty01","bidQtty02","bidQtty03",
     "offerPrice01","offerPrice02","offerPrice03",
     "offerQtty01","offerQtty02","offerQtty03",
-    "totalBidQtty","totalOfferQtty","bv4","sv4"
+    "totalBidQtty","totalOfferQtty"
   ], values);
 }
 
@@ -147,6 +168,24 @@ function parseMessage(type: string, values: string[]): RawRecord | null {
   if (type === "SBS") return parseSBS(values);
   if (type === "SBA") return parseSBA(values);
   return null;
+}
+
+
+function shares(value: unknown): number | null {
+  const x = num(value);
+  // Snapshot quantity fields are in board lots of 10 shares.
+  return x == null ? null : x * 10;
+}
+
+function roomShares(value: unknown): number | null {
+  const x = num(value);
+  return x == null ? null : x * 10;
+}
+
+function tradedValueVnd(value: unknown): number | null {
+  const x = num(value);
+  // Snapshot accumulatedVal is in million VND.
+  return x == null ? null : x * 1_000_000;
 }
 
 function toRealtime(row: RawRecord): VndRealtimeStock | null {
@@ -161,32 +200,32 @@ function toRealtime(row: RawRecord): VndRealtimeStock | null {
     floorPrice: num(row.floorPrice),
     ceilingPrice: num(row.ceilingPrice),
     currentPrice: num(row.currentPrice),
-    currentQtty: num(row.currentQtty),
+    currentQtty: shares(row.currentQtty),
     matchPrice: num(row.matchPrice),
-    matchQtty: num(row.matchQtty),
+    matchQtty: shares(row.matchQtty),
     highestPrice: num(row.highestPrice),
     lowestPrice: num(row.lowestPrice),
     averagePrice: num(row.averagePrice),
-    accumulatedVal: num(row.accumulatedVal),
-    accumulatedVol: num(row.accumulatedVol),
-    buyForeignQtty: num(row.buyForeignQtty),
-    sellForeignQtty: num(row.sellForeignQtty),
-    totalRoom: num(row.totalRoom),
-    currentRoom: num(row.currentRoom),
+    accumulatedVal: tradedValueVnd(row.accumulatedVal),
+    accumulatedVol: shares(row.accumulatedVol),
+    buyForeignQtty: shares(row.buyForeignQtty),
+    sellForeignQtty: shares(row.sellForeignQtty),
+    totalRoom: roomShares(row.totalRoom),
+    currentRoom: roomShares(row.currentRoom),
     bidPrice01: num(row.bidPrice01),
     bidPrice02: num(row.bidPrice02),
     bidPrice03: num(row.bidPrice03),
-    bidQtty01: num(row.bidQtty01),
-    bidQtty02: num(row.bidQtty02),
-    bidQtty03: num(row.bidQtty03),
+    bidQtty01: shares(row.bidQtty01),
+    bidQtty02: shares(row.bidQtty02),
+    bidQtty03: shares(row.bidQtty03),
     offerPrice01: num(row.offerPrice01),
     offerPrice02: num(row.offerPrice02),
     offerPrice03: num(row.offerPrice03),
-    offerQtty01: num(row.offerQtty01),
-    offerQtty02: num(row.offerQtty02),
-    offerQtty03: num(row.offerQtty03),
-    totalBidQtty: num(row.totalBidQtty),
-    totalOfferQtty: num(row.totalOfferQtty),
+    offerQtty01: shares(row.offerQtty01),
+    offerQtty02: shares(row.offerQtty02),
+    offerQtty03: shares(row.offerQtty03),
+    totalBidQtty: shares(row.totalBidQtty),
+    totalOfferQtty: shares(row.totalOfferQtty),
     time: row.time == null ? null : String(row.time)
   };
 }
