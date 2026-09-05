@@ -988,3 +988,199 @@ footer {
       linear-gradient(180deg, rgba(37, 99, 235, .14), rgba(12, 25, 41, .96)) !important;
   }
 }
+
+
+/* ==========================================================
+   V7.8 — CLEAN USER UI + GUARANTEED CHANGE DISPLAY LAYOUT
+   ========================================================== */
+
+.desktopWorldCard,
+.mobileWorldCard {
+  padding: 0;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(245,183,0,.08), transparent 26%),
+    linear-gradient(180deg, #0b1829 0%, #071320 100%);
+}
+
+.goldSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 15px 10px;
+  border-bottom: 1px solid #20344d;
+}
+
+.goldSectionHeader .sectionTitle {
+  margin-top: 6px;
+}
+
+.goldQuote {
+  padding: 15px;
+  border-bottom: 1px solid #20344d;
+  background:
+    linear-gradient(135deg, rgba(245,183,0,.055), rgba(18,229,138,.018) 50%, rgba(59,130,246,.035));
+}
+
+.goldQuote.loading {
+  color: #91a8bf;
+  min-height: 110px;
+  display: grid;
+  align-items: center;
+}
+
+.goldQuoteTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.goldQuoteSymbol {
+  color: #8eabc5;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.goldQuotePrice {
+  margin-top: 5px;
+  color: #f8fafc;
+  font-size: clamp(38px, 4.5vw, 56px);
+  line-height: .98;
+  font-weight: 950;
+  letter-spacing: -.045em;
+}
+
+.goldMove {
+  min-width: 145px;
+  padding: 10px 12px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  text-align: right;
+}
+
+.goldMove.positive {
+  color: #18e58c;
+  background: rgba(24,229,140,.075);
+}
+
+.goldMove.negative {
+  color: #ff5367;
+  background: rgba(255,83,103,.075);
+}
+
+.goldMove.neutral {
+  color: #cbd5e1;
+  background: rgba(203,213,225,.035);
+}
+
+.goldMovePct {
+  font-size: 21px;
+  font-weight: 950;
+  letter-spacing: -.02em;
+}
+
+.goldMoveAbs {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.goldQuoteBottom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.goldQuoteBottom > div {
+  padding: 9px 10px;
+  border: 1px solid #1d3148;
+  border-radius: 9px;
+  background: rgba(4,15,27,.62);
+}
+
+.goldQuoteBottom span {
+  display: block;
+  color: #6988a6;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.goldQuoteBottom strong {
+  display: block;
+  margin-top: 3px;
+  color: #e7f0f8;
+  font-size: 11px;
+}
+
+.desktopWorldCard .tvChartWidget {
+  border-top: 0;
+}
+
+.mobileWorldCard {
+  display: none;
+}
+
+/* Explicitly suppress technical explanation / old detail sections */
+.referenceFeedDetails,
+footer,
+.tvNotice,
+.mobileWorldNote,
+.sourceBox,
+.quoteMetaGrid {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .desktopWorldCard {
+    display: none;
+  }
+
+  .mobileWorldCard {
+    display: block;
+  }
+
+  .goldSectionHeader {
+    padding: 11px 11px 7px;
+  }
+
+  .goldQuote.compact {
+    padding: 13px 11px;
+  }
+
+  .goldQuote.compact .goldQuoteTop {
+    gap: 8px;
+  }
+
+  .goldQuote.compact .goldQuotePrice {
+    font-size: clamp(30px, 10vw, 40px);
+  }
+
+  .goldQuote.compact .goldMove {
+    min-width: 112px;
+    padding: 8px 9px;
+  }
+
+  .goldQuote.compact .goldMovePct {
+    font-size: 15px;
+  }
+
+  .goldQuote.compact .goldMoveAbs {
+    font-size: 8px;
+  }
+
+  .goldQuote.compact .goldQuoteBottom {
+    margin-top: 10px;
+  }
+
+  .goldQuote.compact .goldQuoteBottom > div {
+    padding: 8px;
+  }
+
+  .mobileWorldCard .goldReferenceLinks {
+    padding: 9px 10px 10px;
+  }
+}

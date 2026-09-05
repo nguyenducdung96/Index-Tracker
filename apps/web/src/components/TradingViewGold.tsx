@@ -59,34 +59,37 @@ function TradingViewWidget({ scriptSrc, config, className = "" }: WidgetProps) {
   return <div ref={ref} className={className} />;
 }
 
-function QuoteSummary({
-  quote,
-  compact = false
-}: {
+function GoldQuote({ quote, compact = false }: {
   quote: WorldGoldQuote | null;
   compact?: boolean;
 }) {
   if (!quote) {
     return (
-      <div className={compact ? "quoteSummary compact loading" : "quoteSummary loading"}>
-        Đang tải XAU/USD…
+      <div className={`goldQuote ${compact ? "compact" : ""} loading`}>
+        Đang tải giá vàng…
       </div>
     );
   }
 
-  const pct = quote.changePct ?? null;
+  const previous = quote.previousClose ?? null;
   const abs = quote.changeAbs ?? (
-    quote.previousClose != null ? quote.price - quote.previousClose : null
+    previous != null ? quote.price - previous : null
   );
+  const pct = quote.changePct ?? (
+    previous != null && previous > 0 ? ((quote.price - previous) / previous) * 100 : null
+  );
+
   const direction =
-    pct == null ? "neutral" : pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral";
+    pct == null ? "neutral" :
+    pct > 0 ? "positive" :
+    pct < 0 ? "negative" : "neutral";
 
   return (
-    <div className={compact ? "quoteSummary compact" : "quoteSummary"}>
-      <div className="quoteSummaryTop">
+    <div className={`goldQuote ${compact ? "compact" : ""}`}>
+      <div className="goldQuoteTop">
         <div>
-          <div className="quoteSymbol">XAU/USD</div>
-          <div className="quotePrice">
+          <div className="goldQuoteSymbol">XAU/USD</div>
+          <div className="goldQuotePrice">
             ${quote.price.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2
@@ -94,46 +97,35 @@ function QuoteSummary({
           </div>
         </div>
 
-        <div className={`quoteChangePill ${direction}`}>
-          <span className="quoteChangePct">
+        <div className={`goldMove ${direction}`}>
+          <div className="goldMovePct">
             {pct == null
-              ? "—"
+              ? "Đang lấy %"
               : `${pct > 0 ? "▲" : pct < 0 ? "▼" : "●"} ${pct > 0 ? "+" : ""}${pct.toFixed(2)}%`}
-          </span>
-          {abs != null && (
-            <span className="quoteChangeAbs">
-              {abs > 0 ? "+" : ""}{abs.toFixed(2)} USD
-            </span>
-          )}
+          </div>
+
+          <div className="goldMoveAbs">
+            {abs == null
+              ? "—"
+              : `${abs > 0 ? "+" : ""}${abs.toFixed(2)} USD`}
+          </div>
         </div>
       </div>
 
-      <div className="quoteStats">
-        <div className="quoteStat">
-          <span>Previous close</span>
+      <div className="goldQuoteBottom">
+        <div>
+          <span>Đóng cửa trước</span>
           <strong>
-            {quote.previousClose != null
-              ? `$${quote.previousClose.toLocaleString("en-US", {
+            {previous == null
+              ? "Đang cập nhật"
+              : `$${previous.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
-                })}`
-              : "—"}
+                })}`}
           </strong>
         </div>
 
-        <div className="quoteStat">
-          <span>Biến động</span>
-          <strong className={direction}>
-            {pct == null ? "Chưa có dữ liệu" : pct > 0 ? "Tăng" : pct < 0 ? "Giảm" : "Không đổi"}
-          </strong>
-        </div>
-
-        <div className="quoteStat">
-          <span>Nguồn giá app</span>
-          <strong>{quote.source}</strong>
-        </div>
-
-        <div className="quoteStat">
+        <div>
           <span>Cập nhật</span>
           <strong>
             {new Date(quote.receivedAt ?? quote.observedAt).toLocaleTimeString("vi-VN")}
@@ -189,49 +181,38 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
 
   if (isMobile) {
     return (
-      <section className="card worldMobileCard">
-        <div className="worldMobileHeader">
+      <section className="card mobileWorldCard">
+        <div className="goldSectionHeader">
           <div>
             <div className="eyebrowRow">
               <span className="eyebrow">GOLD · WORLD</span>
               <span className="liveBadge live">● LIVE</span>
             </div>
-            <h2>Vàng thế giới</h2>
+            <div className="sectionTitle">Vàng thế giới</div>
           </div>
         </div>
 
-        <QuoteSummary quote={quote} compact />
+        <GoldQuote quote={quote} compact />
         {links}
-
-        <div className="mobileWorldNote">
-          Chart nhúng TradingView không dùng trên mobile/PWA để tránh lỗi màn hình đen.
-          Mở TradingView hoặc Trading Economics để xem chart đầy đủ.
-        </div>
       </section>
     );
   }
 
   return (
-    <section className="card tvGoldCard">
-      <div className="tvGoldHeader">
+    <section className="card desktopWorldCard">
+      <div className="goldSectionHeader">
         <div>
           <div className="eyebrowRow">
             <span className="eyebrow">GOLD · XAU/USD</span>
             <span className="liveBadge live">● LIVE</span>
-            <span className="freeBadge">FREE</span>
           </div>
-          <div className="sectionTitle tvTitle">Vàng thế giới · OANDA</div>
-          <div className="unit">
-            Giá và % biến động của app phía trên · TradingView chart phía dưới.
-          </div>
+          <div className="sectionTitle">Vàng thế giới</div>
         </div>
 
         {links}
       </div>
 
-      <div className="desktopQuotePanel">
-        <QuoteSummary quote={quote} />
-      </div>
+      <GoldQuote quote={quote} />
 
       <div className="tvChartWidget">
         <TradingViewWidget
@@ -239,12 +220,6 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
           config={chartConfig}
           className="tvAdvancedChart"
         />
-      </div>
-
-      <div className="tvNotice">
-        <strong>Chart:</strong> TradingView · {symbol}
-        <span> · </span>
-        <span>Giá/% app: {quote?.source ?? "đang tải"}</span>
       </div>
     </section>
   );

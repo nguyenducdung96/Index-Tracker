@@ -1,12 +1,12 @@
 import type { WorldGoldQuote } from "../types.js";
-import { getStooqPreviousClose } from "./worldHistory.js";
+import { getStooqPreviousClose, getYahooGoldPreviousClose } from "./worldHistory.js";
 
 const TE_PAGE = "https://tradingeconomics.com/commodity/gold";
 const GOLD_API_PAGE = "https://gold-api.com/";
 
 let previousCloseCache: {
   value: number | null;
-  source: "stooq" | null;
+  source: "stooq" | "yahoo" | null;
   expiresAt: number;
 } = { value: null, source: null, expiresAt: 0 };
 
@@ -15,18 +15,35 @@ async function getCachedFallbackPreviousClose() {
     return previousCloseCache;
   }
 
+  // Prefer Stooq because it is already used for our long-history series.
   try {
-    const value = await getStooqPreviousClose();
-    if (value != null) {
+    const stooq = await getStooqPreviousClose();
+    if (stooq != null && Number.isFinite(stooq) && stooq > 0) {
       previousCloseCache = {
-        value,
+        value: stooq,
         source: "stooq",
-        // Previous close does not need a request every realtime tick.
         expiresAt: Date.now() + 10 * 60_000
       };
+      return previousCloseCache;
     }
-  } catch (error) {
-    console.error("Previous-close fallback failed:", error);
+  } catch {
+    // Continue to Yahoo.
+  }
+
+  // Second free/no-key source. This closes the gap seen when Stooq is blocked
+  // from a specific Cloudflare edge or returns no completed daily bar.
+  try {
+    const yahoo = await getYahooGoldPreviousClose();
+    if (yahoo != null && Number.isFinite(yahoo) && yahoo > 0) {
+      previousCloseCache = {
+        value: yahoo,
+        source: "yahoo",
+        expiresAt: Date.now() + 10 * 60_000
+      };
+      return previousCloseCache;
+    }
+  } catch {
+    // Worker/D1 can still provide a local previous-day fallback.
   }
 
   return previousCloseCache;

@@ -47,7 +47,24 @@ async function worldQuote(env: Env, ctx: ExecutionContext): Promise<WorldGoldQuo
   const cached = await cache.match(cacheKey);
 
   if (cached) {
-    const q = await cached.json<WorldGoldQuote>();
+    let q = await cached.json<WorldGoldQuote>();
+
+    // A cached quote from an earlier request may not have previousClose yet.
+    // Repair it from D1 before returning so the UI can show % / absolute change.
+    if (q.previousClose == null) {
+      const localPrevious = await getPreviousWorldClose(env.DB);
+      if (localPrevious != null && Number.isFinite(localPrevious) && localPrevious > 0) {
+        const changeAbs = q.price - localPrevious;
+        q = {
+          ...q,
+          previousClose: localPrevious,
+          previousCloseSource: "local-db",
+          changeAbs,
+          changePct: (changeAbs / localPrevious) * 100
+        };
+      }
+    }
+
     ctx.waitUntil(saveWorldIfDue(env.DB, q).catch(console.error));
     return q;
   }

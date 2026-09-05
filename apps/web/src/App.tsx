@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { getDashboard, subscribeDashboard } from "./api";
 import type { Dashboard } from "./types";
-import { WorldCard } from "./components/WorldCard";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 
-const APP_VERSION = "V7.7";
+const APP_VERSION = "V7.8";
 
 const empty: Dashboard = {
   world: null,
@@ -26,7 +25,6 @@ export default function App() {
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
-
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
@@ -42,7 +40,7 @@ export default function App() {
       <header className="appHeader">
         <div>
           <h1>Gold Tracker</h1>
-          <p>Dashboard cá nhân · PWA · {APP_VERSION}</p>
+          <p>PWA · {APP_VERSION}</p>
         </div>
 
         <div className="headerRight">
@@ -63,17 +61,10 @@ export default function App() {
 
       <TradingViewGoldLive quote={dashboard.world} />
 
-      <details className="referenceFeedDetails">
-        <summary>Chi tiết nguồn giá tính toán — Gold-API</summary>
-        <WorldCard quote={dashboard.world} />
-      </details>
-
-      <VietnamTable rows={dashboard.vietnam} providers={dashboard.providers} />
-
-      <footer>
-        {APP_VERSION} · Desktop dùng TradingView chart. Mobile ưu tiên độ ổn định:
-        giá XAU/USD + % thay đổi và link TradingView/Trading Economics.
-      </footer>
+      <VietnamTable
+        rows={dashboard.vietnam}
+        providers={dashboard.providers}
+      />
     </main>
   );
 }
