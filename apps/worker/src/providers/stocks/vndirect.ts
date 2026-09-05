@@ -1,4 +1,5 @@
 import { getRealtimeSnapshots, type VndRealtimeStock } from "./vndirectRealtime.js";
+import { getForeignTradingMap } from "./fireantForeign.js";
 import type {
   StockChartPoint,
   StockDetail,
@@ -522,7 +523,7 @@ function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
   const clean = symbols.map(x => x.trim().toUpperCase());
 
-  const [baseRows, realtime] = await Promise.all([
+  const [baseRows, realtime, foreignMap] = await Promise.all([
     Promise.all(
       clean.map(async (code) => {
         const row = await getLatestStockRow(code);
@@ -557,10 +558,39 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
             } satisfies StockQuote;
       })
     ),
-    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>())
+    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>()),
+    getForeignTradingMap(clean).catch(() => new Map())
   ]);
 
-  return baseRows.map(row => mergeRealtimeQuote(row, realtime.get(row.code)));
+  return baseRows.map(base => {
+    // First supplement matchVol/room from realtime snapshot, while preserving
+    // authoritative HTTP price/liquidity fields.
+    const merged = mergeRealtimeQuote(base, realtime.get(base.code));
+
+    // Foreign trading must come from FireAnt's explicit per-symbol fields.
+    // Do NOT estimate buy/sell value from VNDIRECT snapshot quantities.
+    const fa = foreignMap.get(base.code);
+    if (!fa) {
+      return {
+        ...merged,
+        foreignBuyVol: null,
+        foreignSellVol: null,
+        foreignBuyVal: null,
+        foreignSellVal: null,
+        foreignValueEstimated: false
+      };
+    }
+
+    return {
+      ...merged,
+      foreignBuyVol: fa.buyForeignQuantity,
+      foreignSellVol: fa.sellForeignQuantity,
+      foreignBuyVal: fa.buyForeignValue,
+      foreignSellVal: fa.sellForeignValue,
+      foreignValueEstimated: false,
+      currentRoom: fa.currentForeignRoom ?? merged.currentRoom ?? null
+    };
+  });
 }
 
 function sma(values: number[], length: number, index: number): number | null {
