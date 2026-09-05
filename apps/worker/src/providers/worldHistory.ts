@@ -122,50 +122,39 @@ export async function getStooqPreviousClose(): Promise<number | null> {
 
 
 export async function getYahooGoldPreviousClose(): Promise<number | null> {
-  // Free/no-key fallback. Yahoo Finance has historically exposed XAUUSD=X.
-  // Try spot XAU/USD first, then XAU=X as a secondary alias.
   const symbols = ["XAUUSD=X", "XAU=X"];
-
   for (const symbol of symbols) {
     try {
       const url =
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
-        `?range=5d&interval=1d&includePrePost=false&events=div%2Csplits`;
-
+        `?range=5d&interval=1d&includePrePost=false`;
       const res = await fetch(url, {
         headers: {
-          "user-agent": "Mozilla/5.0 GoldTrackerPWA/7.8",
+          "user-agent": "Mozilla/5.0 GoldTrackerPWA/7.9",
           accept: "application/json,text/plain,*/*"
         },
         signal: AbortSignal.timeout(8000)
       });
-
       if (!res.ok) continue;
-
       const payload = await res.json() as any;
       const result = payload?.chart?.result?.[0];
       if (!result) continue;
 
-      const metaPrev = Number(
+      const prev = Number(
         result?.meta?.chartPreviousClose ??
         result?.meta?.previousClose ??
         result?.meta?.regularMarketPreviousClose
       );
-
-      if (Number.isFinite(metaPrev) && metaPrev > 0) {
-        return metaPrev;
-      }
+      if (Number.isFinite(prev) && prev > 0) return prev;
 
       const closes = (result?.indicators?.quote?.[0]?.close ?? [])
         .map((x: unknown) => Number(x))
         .filter((x: number) => Number.isFinite(x) && x > 0);
-
       if (closes.length >= 2) return closes[closes.length - 2];
       if (closes.length === 1) return closes[0];
     } catch {
-      // Try the next Yahoo symbol.
+      // continue
     }
   }
-
   return null;
 }

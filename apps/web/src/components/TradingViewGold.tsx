@@ -76,11 +76,13 @@ function GoldQuote({ quote, compact = false }: {
     previous != null ? quote.price - previous : null
   );
   const pct = quote.changePct ?? (
-    previous != null && previous > 0 ? ((quote.price - previous) / previous) * 100 : null
+    previous != null && previous > 0
+      ? ((quote.price - previous) / previous) * 100
+      : null
   );
 
   const direction =
-    pct == null ? "neutral" :
+    pct == null ? "pending" :
     pct > 0 ? "positive" :
     pct < 0 ? "negative" : "neutral";
 
@@ -100,13 +102,13 @@ function GoldQuote({ quote, compact = false }: {
         <div className={`goldMove ${direction}`}>
           <div className="goldMovePct">
             {pct == null
-              ? "Đang lấy %"
+              ? "..."
               : `${pct > 0 ? "▲" : pct < 0 ? "▼" : "●"} ${pct > 0 ? "+" : ""}${pct.toFixed(2)}%`}
           </div>
 
           <div className="goldMoveAbs">
             {abs == null
-              ? "—"
+              ? "Đang cập nhật"
               : `${abs > 0 ? "+" : ""}${abs.toFixed(2)} USD`}
           </div>
         </div>
@@ -117,7 +119,7 @@ function GoldQuote({ quote, compact = false }: {
           <span>Đóng cửa trước</span>
           <strong>
             {previous == null
-              ? "Đang cập nhật"
+              ? "..."
               : `$${previous.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2
@@ -128,7 +130,8 @@ function GoldQuote({ quote, compact = false }: {
         <div>
           <span>Cập nhật</span>
           <strong>
-            {new Date(quote.receivedAt ?? quote.observedAt).toLocaleTimeString("vi-VN")}
+            {new Date(quote.receivedAt ?? quote.observedAt)
+              .toLocaleTimeString("vi-VN")}
           </strong>
         </div>
       </div>
@@ -162,18 +165,10 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
 
   const links = (
     <div className="goldReferenceLinks">
-      <a
-        href="https://www.tradingview.com/symbols/XAUUSD/"
-        target="_blank"
-        rel="noreferrer"
-      >
+      <a href="https://www.tradingview.com/symbols/XAUUSD/" target="_blank" rel="noreferrer">
         TradingView ↗
       </a>
-      <a
-        href="https://tradingeconomics.com/commodity/gold"
-        target="_blank"
-        rel="noreferrer"
-      >
+      <a href="https://tradingeconomics.com/commodity/gold" target="_blank" rel="noreferrer">
         Trading Economics ↗
       </a>
     </div>

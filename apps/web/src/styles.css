@@ -989,24 +989,23 @@ footer {
   }
 }
 
-
 /* ==========================================================
-   V7.8 — CLEAN USER UI + GUARANTEED CHANGE DISPLAY LAYOUT
+   V7.9 — WORLD GOLD COLOR + CLEAN DISPLAY
    ========================================================== */
 
 .desktopWorldCard,
 .mobileWorldCard {
-  padding: 0;
+  padding: 0 !important;
   background:
-    radial-gradient(circle at 10% 0%, rgba(245,183,0,.08), transparent 26%),
-    linear-gradient(180deg, #0b1829 0%, #071320 100%);
+    radial-gradient(circle at 8% 0%, rgba(245,183,0,.10), transparent 30%),
+    linear-gradient(180deg, #0b1929 0%, #07131f 100%) !important;
 }
 
 .goldSectionHeader {
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 15px;
   padding: 14px 15px 10px;
   border-bottom: 1px solid #20344d;
 }
@@ -1019,25 +1018,25 @@ footer {
   padding: 15px;
   border-bottom: 1px solid #20344d;
   background:
-    linear-gradient(135deg, rgba(245,183,0,.055), rgba(18,229,138,.018) 50%, rgba(59,130,246,.035));
+    linear-gradient(135deg, rgba(245,183,0,.07), rgba(34,197,94,.018) 50%, rgba(59,130,246,.04));
 }
 
 .goldQuote.loading {
-  color: #91a8bf;
   min-height: 110px;
   display: grid;
   align-items: center;
+  color: #91aac3;
 }
 
 .goldQuoteTop {
   display: flex;
-  align-items: flex-end;
   justify-content: space-between;
+  align-items: flex-end;
   gap: 16px;
 }
 
 .goldQuoteSymbol {
-  color: #8eabc5;
+  color: #91abc5;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: .09em;
@@ -1045,8 +1044,9 @@ footer {
 
 .goldQuotePrice {
   margin-top: 5px;
-  color: #f8fafc;
-  font-size: clamp(38px, 4.5vw, 56px);
+  color: #f2c94c !important;
+  text-shadow: 0 0 24px rgba(242,201,76,.08);
+  font-size: clamp(38px,4.5vw,56px);
   line-height: .98;
   font-weight: 950;
   letter-spacing: -.045em;
@@ -1062,12 +1062,14 @@ footer {
 
 .goldMove.positive {
   color: #18e58c;
-  background: rgba(24,229,140,.075);
+  background: rgba(24,229,140,.08);
+  box-shadow: 0 0 22px rgba(24,229,140,.045);
 }
 
 .goldMove.negative {
   color: #ff5367;
-  background: rgba(255,83,103,.075);
+  background: rgba(255,83,103,.08);
+  box-shadow: 0 0 22px rgba(255,83,103,.045);
 }
 
 .goldMove.neutral {
@@ -1075,10 +1077,14 @@ footer {
   background: rgba(203,213,225,.035);
 }
 
+.goldMove.pending {
+  color: #f2c94c;
+  background: rgba(242,201,76,.055);
+}
+
 .goldMovePct {
   font-size: 21px;
   font-weight: 950;
-  letter-spacing: -.02em;
 }
 
 .goldMoveAbs {
@@ -1089,7 +1095,7 @@ footer {
 
 .goldQuoteBottom {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 8px;
   margin-top: 13px;
 }
@@ -1116,15 +1122,11 @@ footer {
   font-size: 11px;
 }
 
-.desktopWorldCard .tvChartWidget {
-  border-top: 0;
-}
-
 .mobileWorldCard {
   display: none;
 }
 
-/* Explicitly suppress technical explanation / old detail sections */
+/* No technical commentary or internal source cards in user UI */
 .referenceFeedDetails,
 footer,
 .tvNotice,
@@ -1134,13 +1136,13 @@ footer,
   display: none !important;
 }
 
-@media (max-width: 760px) {
+@media (max-width:760px) {
   .desktopWorldCard {
-    display: none;
+    display: none !important;
   }
 
   .mobileWorldCard {
-    display: block;
+    display: block !important;
   }
 
   .goldSectionHeader {
@@ -1156,12 +1158,12 @@ footer,
   }
 
   .goldQuote.compact .goldQuotePrice {
-    font-size: clamp(30px, 10vw, 40px);
+    font-size: clamp(30px,10vw,40px);
   }
 
   .goldQuote.compact .goldMove {
-    min-width: 112px;
-    padding: 8px 9px;
+    min-width: 108px;
+    padding: 8px 8px;
   }
 
   .goldQuote.compact .goldMovePct {
@@ -1174,10 +1176,6 @@ footer,
 
   .goldQuote.compact .goldQuoteBottom {
     margin-top: 10px;
-  }
-
-  .goldQuote.compact .goldQuoteBottom > div {
-    padding: 8px;
   }
 
   .mobileWorldCard .goldReferenceLinks {

@@ -4,7 +4,7 @@ import type { Dashboard } from "./types";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 
-const APP_VERSION = "V7.8";
+const APP_VERSION = "V7.9";
 
 const empty: Dashboard = {
   world: null,
@@ -25,6 +25,7 @@ export default function App() {
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
+
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 

@@ -9,7 +9,7 @@ export type WorldGoldQuote = {
   observedAt: string;
   receivedAt: string;
   previousClose?: number | null;
-  previousCloseSource?: "tradingeconomics" | "stooq" | "yahoo" | "local-db" | null;
+  previousCloseSource?: "tradingeconomics" | "gold-api-ohlc" | "stooq" | "yahoo" | "local-db" | null;
   changeAbs?: number | null;
   changePct?: number | null;
 };

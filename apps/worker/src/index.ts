@@ -26,6 +26,7 @@ import {
 interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  GOLD_API_KEY?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -49,8 +50,6 @@ async function worldQuote(env: Env, ctx: ExecutionContext): Promise<WorldGoldQuo
   if (cached) {
     let q = await cached.json<WorldGoldQuote>();
 
-    // A cached quote from an earlier request may not have previousClose yet.
-    // Repair it from D1 before returning so the UI can show % / absolute change.
     if (q.previousClose == null) {
       const localPrevious = await getPreviousWorldClose(env.DB);
       if (localPrevious != null && Number.isFinite(localPrevious) && localPrevious > 0) {
@@ -69,7 +68,7 @@ async function worldQuote(env: Env, ctx: ExecutionContext): Promise<WorldGoldQuo
     return q;
   }
 
-  let q = await getWorldGoldQuote();
+  let q = await getWorldGoldQuote(env.GOLD_API_KEY);
 
   if (q.previousClose == null) {
     const localPrevious = await getPreviousWorldClose(env.DB);
