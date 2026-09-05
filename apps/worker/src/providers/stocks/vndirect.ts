@@ -415,53 +415,95 @@ function validPositive(value: number | null | undefined) {
   return value != null && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote {
-  if (!rt) return {
-    ...base,
-    realtimeSnapshotAvailable: false
-  };
+function sanePrice(value: number | null | undefined, basePrice: number | null | undefined) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
 
-  const matchPrice = validPositive(rt.matchPrice) ?? validPositive(rt.currentPrice) ?? base.matchPrice;
-  const refPrice = validPositive(rt.basicPrice) ?? base.refPrice;
-  const avgPrice = validPositive(rt.averagePrice) ?? base.avgPrice;
-
-  let change = base.change;
-  let changePercent = base.changePercent;
-  if (matchPrice != null && refPrice != null) {
-    change = matchPrice - refPrice;
-    changePercent = refPrice !== 0 ? (change / refPrice) * 100 : null;
+  // VN listed equity prices are expected to be in the same quote-board unit
+  // as the HTTP base price. Reject obviously shifted decoder values.
+  if (basePrice != null && basePrice > 0) {
+    const ratio = value / basePrice;
+    if (ratio < 0.25 || ratio > 4) return null;
   }
 
-  const foreignBuyVol = rt.buyForeignQtty ?? base.foreignBuyVol ?? null;
-  const foreignSellVol = rt.sellForeignQtty ?? base.foreignSellVol ?? null;
+  return value;
+}
 
-  // Snapshot exposes foreign quantities, not a documented exact notional.
-  // Estimate value from average/current price and mark it explicitly.
-  const valuePx = avgPrice ?? matchPrice;
+function saneNonNegative(value: number | null | undefined) {
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote {
+  if (!rt) {
+    return {
+      ...base,
+      realtimeSnapshotAvailable: false
+    };
+  }
+
+  /*
+   * IMPORTANT:
+   * VNDIRECT v4 HTTP remains the authoritative source for:
+   * - matchPrice
+   * - change / changePercent
+   * - accumulatedVol / accumulatedVal
+   * - high / low
+   * - reference / ceiling / floor
+   *
+   * The free realtime snapshot is used ONLY to supplement fields that HTTP
+   * does not provide reliably. This prevents a decoder-layout mismatch from
+   * corrupting already-correct watchlist prices and liquidity.
+   */
+
+  const foreignBuyVol = saneNonNegative(rt.buyForeignQtty) ?? base.foreignBuyVol ?? null;
+  const foreignSellVol = saneNonNegative(rt.sellForeignQtty) ?? base.foreignSellVol ?? null;
+
+  const valuePx = base.avgPrice ?? base.matchPrice;
   const foreignBuyVal =
     foreignBuyVol != null && valuePx != null
       ? foreignBuyVol * valuePx * 1000
       : base.foreignBuyVal ?? null;
+
   const foreignSellVal =
     foreignSellVol != null && valuePx != null
       ? foreignSellVol * valuePx * 1000
       : base.foreignSellVal ?? null;
 
+  // matchQtty is supplemental only. Reject absurd values relative to total vol.
+  let matchVol: number | null = base.matchVol ?? null;
+  const rtMatch = saneNonNegative(rt.matchQtty ?? rt.currentQtty);
+  if (rtMatch != null) {
+    if (base.accumulatedVol == null || base.accumulatedVol <= 0 || rtMatch <= base.accumulatedVol) {
+      matchVol = rtMatch;
+    }
+  }
+
+  const currentRoom = saneNonNegative(rt.currentRoom);
+  const totalRoom = saneNonNegative(rt.totalRoom);
+
+  const roomValid =
+    currentRoom != null &&
+    totalRoom != null &&
+    totalRoom > 0 &&
+    currentRoom <= totalRoom * 1.05;
+
   return {
     ...base,
-    companyName: rt.companyName || base.companyName,
-    matchPrice,
-    matchVol: rt.matchQtty ?? rt.currentQtty ?? base.matchVol ?? null,
-    change,
-    changePercent,
-    accumulatedVol: rt.accumulatedVol ?? base.accumulatedVol,
-    accumulatedVal: rt.accumulatedVal ?? base.accumulatedVal,
-    refPrice,
-    ceilingPrice: validPositive(rt.ceilingPrice) ?? base.ceilingPrice,
-    floorPrice: validPositive(rt.floorPrice) ?? base.floorPrice,
-    highestPrice: validPositive(rt.highestPrice) ?? base.highestPrice,
-    lowestPrice: validPositive(rt.lowestPrice) ?? base.lowestPrice,
-    avgPrice,
+
+    // KEEP all HTTP market price/liquidity fields unchanged.
+    matchPrice: base.matchPrice,
+    change: base.change,
+    changePercent: base.changePercent,
+    accumulatedVol: base.accumulatedVol,
+    accumulatedVal: base.accumulatedVal,
+    refPrice: base.refPrice,
+    ceilingPrice: base.ceilingPrice,
+    floorPrice: base.floorPrice,
+    highestPrice: base.highestPrice,
+    lowestPrice: base.lowestPrice,
+    avgPrice: base.avgPrice,
+
+    // Supplement only.
+    matchVol,
     foreignBuyVol,
     foreignSellVol,
     foreignBuyVal,
@@ -470,8 +512,8 @@ function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote
       foreignBuyVol != null || foreignSellVol != null
         ? true
         : base.foreignValueEstimated,
-    currentRoom: rt.currentRoom ?? null,
-    totalRoom: rt.totalRoom ?? null,
+    currentRoom: roomValid ? currentRoom : base.currentRoom ?? null,
+    totalRoom: roomValid ? totalRoom : base.totalRoom ?? null,
     realtimeSnapshotAvailable: true,
     updatedAt: new Date().toISOString()
   };
@@ -662,16 +704,36 @@ export async function getStockDetail(symbol: string): Promise<StockDetail> {
       ? quote.accumulatedVol / avg20DVol
       : null;
 
+  function validDepthPrice(value: number | null | undefined) {
+    if (value == null || !Number.isFinite(value) || value <= 0) return null;
+    if (quote.matchPrice != null && quote.matchPrice > 0) {
+      const ratio = value / quote.matchPrice;
+      if (ratio < 0.5 || ratio > 1.5) return null;
+    }
+    return value;
+  }
+
+  function validDepthVol(value: number | null | undefined) {
+    if (value == null || !Number.isFinite(value) || value < 0) return null;
+    // Single depth level should not wildly exceed session total volume.
+    if (
+      quote.accumulatedVol != null &&
+      quote.accumulatedVol > 0 &&
+      value > quote.accumulatedVol * 5
+    ) return null;
+    return value;
+  }
+
   const bid = [
-    { price: rt?.bidPrice01 ?? null, volume: rt?.bidQtty01 ?? null },
-    { price: rt?.bidPrice02 ?? null, volume: rt?.bidQtty02 ?? null },
-    { price: rt?.bidPrice03 ?? null, volume: rt?.bidQtty03 ?? null }
+    { price: validDepthPrice(rt?.bidPrice01), volume: validDepthVol(rt?.bidQtty01) },
+    { price: validDepthPrice(rt?.bidPrice02), volume: validDepthVol(rt?.bidQtty02) },
+    { price: validDepthPrice(rt?.bidPrice03), volume: validDepthVol(rt?.bidQtty03) }
   ];
 
   const ask = [
-    { price: rt?.offerPrice01 ?? null, volume: rt?.offerQtty01 ?? null },
-    { price: rt?.offerPrice02 ?? null, volume: rt?.offerQtty02 ?? null },
-    { price: rt?.offerPrice03 ?? null, volume: rt?.offerQtty03 ?? null }
+    { price: validDepthPrice(rt?.offerPrice01), volume: validDepthVol(rt?.offerQtty01) },
+    { price: validDepthPrice(rt?.offerPrice02), volume: validDepthVol(rt?.offerQtty02) },
+    { price: validDepthPrice(rt?.offerPrice03), volume: validDepthVol(rt?.offerQtty03) }
   ];
 
   const bidVol = bid.reduce((sum, x) => sum + (x.volume ?? 0), 0);
@@ -696,11 +758,8 @@ export async function getStockDetail(symbol: string): Promise<StockDetail> {
       : null;
 
   const depthAvailable =
-    Boolean(rt) &&
-    (
-      bid.some(x => x.price != null || x.volume != null) ||
-      ask.some(x => x.price != null || x.volume != null)
-    );
+    bid.some(x => x.price != null || x.volume != null) ||
+    ask.some(x => x.price != null || x.volume != null);
 
   return {
     ...quote,
@@ -716,7 +775,7 @@ export async function getStockDetail(symbol: string): Promise<StockDetail> {
     foreignSellVal,
     foreignNetVal,
     foreignParticipationPct,
-    currentRoom: rt?.currentRoom ?? quote.currentRoom ?? null,
+    currentRoom: quote.currentRoom ?? null,
     realtimeDepthAvailable: depthAvailable
   };
 }
