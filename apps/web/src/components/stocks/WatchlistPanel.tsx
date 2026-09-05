@@ -116,7 +116,7 @@ export function WatchlistPanel({
       <div className="watchlistHeader watchGrid">
         <span>Mã / Sàn</span>
         <span>Giá / Biến động</span>
-        <span>Thanh khoản</span>
+        <span>VOL</span>
         <span>NN Mua / Bán</span>
         <span></span>
       </div>
@@ -156,14 +156,14 @@ export function WatchlistPanel({
             </div>
 
             <div className="watchLiquidity">
-              <span className="mobileMetricLabel">Thanh khoản</span>
+              <span className="mobileMetricLabel">VOL</span>
               <strong>{fmtVol(q.accumulatedVol)} cp</strong>
               <small>{fmtVal(q.accumulatedVal)}</small>
               <div
                 className={`volAvg20 ${ratioClass(q.volumeVsAvg20)}`}
                 title={q.avg20DVol == null ? "Chưa có Avg20D" : `Avg20D: ${fmtVol(q.avg20DVol)} cp`}
               >
-                <span>Vol / Avg20D</span>
+                <span>AVG</span>
                 <b>{q.volumeVsAvg20 == null ? "—" : `${q.volumeVsAvg20.toFixed(2)}x`}</b>
               </div>
             </div>

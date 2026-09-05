@@ -1864,3 +1864,16 @@ footer,
     font-size: 8px;
   }
 }
+
+
+/* V8.5.1 — compact Watchlist liquidity labels on mobile */
+@media (max-width: 760px) {
+  .watchLiquidity .volAvg20 {
+    gap: 4px;
+    padding: 2px 4px;
+    min-width: 0;
+  }
+  .watchLiquidity .volAvg20 span {
+    letter-spacing: 0;
+  }
+}

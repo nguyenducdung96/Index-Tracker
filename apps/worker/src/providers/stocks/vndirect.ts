@@ -550,30 +550,28 @@ async function getAvg20DVolume(symbol: string): Promise<number | null> {
   }
 
   try {
-    /*
-     * Use daily historical rows directly, not intraday quote requests.
-     * The last 20 completed sessions form Avg20D.
-     *
-     * Cache 30 minutes: Avg20D changes only after a trading session closes,
-     * while accumulatedVol keeps refreshing through the normal watchlist poll.
-     */
-    const rows = await getStockRows(code, 60, 100);
-    const vols = rows
-      .map(row => n(row?.nmVolume, row?.volume))
-      .filter((x): x is number => x != null && Number.isFinite(x) && x > 0);
+    // IMPORTANT:
+    // Use the exact same daily chart source and calculation as Stock Detail.
+    // Previously Watchlist calculated Avg20D directly from REST stock-price rows,
+    // while Stock Detail used getStockChart("D"). Those two sources can differ,
+    // which caused Watchlist Vol/Avg20D to disagree with Detail.
+    const daily = await getStockChart(code, "D");
+    const vols = daily
+      .slice(-20)
+      .map(x => Number(x.volume))
+      .filter(x => Number.isFinite(x) && x >= 0);
 
-    const completed = vols.slice(-20);
-    const avg =
-      completed.length > 0
-        ? completed.reduce((sum, x) => sum + x, 0) / completed.length
+    const avg20DVol =
+      vols.length > 0
+        ? vols.reduce((sum, x) => sum + x, 0) / vols.length
         : null;
 
     avg20DCache.set(code, {
-      avg20DVol: avg,
+      avg20DVol,
       expiresAt: Date.now() + 30 * 60_000
     });
 
-    return avg;
+    return avg20DVol;
   } catch {
     avg20DCache.set(code, {
       avg20DVol: null,
