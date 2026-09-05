@@ -153,7 +153,7 @@ export function WatchlistPanel({
               <small>{fmtVal(q.accumulatedVal)}</small>
             </div>
 
-            <div className="watchForeign">
+            <div className="watchForeign" title="VNDIRECT: KL NN realtime; GT = KL × giá bình quân">
               <span className="mobileMetricLabel">
                 NN Mua / Bán
               </span>

@@ -1,5 +1,4 @@
 import { getRealtimeSnapshots, type VndRealtimeStock } from "./vndirectRealtime.js";
-import { getForeignTradingMap } from "./fireantForeign.js";
 import type {
   StockChartPoint,
   StockDetail,
@@ -433,64 +432,83 @@ function saneNonNegative(value: number | null | undefined) {
   return value != null && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function saneNonNegative(value: number | null | undefined) {
+  return value != null && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote {
   if (!rt) {
     return {
       ...base,
-      realtimeSnapshotAvailable: false
+      realtimeSnapshotAvailable: false,
+      foreignBuyVol: null,
+      foreignSellVol: null,
+      foreignBuyVal: null,
+      foreignSellVal: null,
+      foreignValueEstimated: false
     };
   }
 
   /*
-   * IMPORTANT:
-   * VNDIRECT v4 HTTP remains the authoritative source for:
-   * - matchPrice
-   * - change / changePercent
-   * - accumulatedVol / accumulatedVal
-   * - high / low
-   * - reference / ceiling / floor
+   * V8.4 data ownership:
    *
-   * The free realtime snapshot is used ONLY to supplement fields that HTTP
-   * does not provide reliably. This prevents a decoder-layout mismatch from
-   * corrupting already-correct watchlist prices and liquidity.
+   * VNDIRECT v4 HTTP remains authoritative for:
+   *   price / change / total volume / total value / high / low / avg price.
+   *
+   * VNDIRECT realtime snapshot supplements ONLY:
+   *   match volume, foreign buy/sell quantity, room, top-3 depth.
+   *
+   * This ensures an upstream snapshot-layout change can never corrupt the
+   * already-correct watchlist price and liquidity.
    */
 
-  const foreignBuyVol = saneNonNegative(rt.buyForeignQtty) ?? base.foreignBuyVol ?? null;
-  const foreignSellVol = saneNonNegative(rt.sellForeignQtty) ?? base.foreignSellVol ?? null;
+  const foreignBuyVol = saneNonNegative(rt.buyForeignQtty);
+  const foreignSellVol = saneNonNegative(rt.sellForeignQtty);
 
-  const valuePx = base.avgPrice ?? base.matchPrice;
+  /*
+   * VNDIRECT's quote board foreign quantities are exact.
+   * Its detail panel's foreign buy/sell values are reproduced from those
+   * quantities using the session average price. Production check on HPG:
+   *
+   * 1,293,680 × 21.699 × 1,000 = 28.0716B VND  -> VNDIRECT: 28.07B
+   * 4,591,976 × 21.699 × 1,000 = 99.6413B VND  -> VNDIRECT: 99.64B
+   *
+   * Keep foreignValueEstimated=true because the exact execution-by-execution
+   * foreign notional is not exposed by this free snapshot.
+   */
+  const px = base.avgPrice ?? base.matchPrice;
   const foreignBuyVal =
-    foreignBuyVol != null && valuePx != null
-      ? foreignBuyVol * valuePx * 1000
-      : base.foreignBuyVal ?? null;
+    foreignBuyVol != null && px != null
+      ? foreignBuyVol * px * 1000
+      : null;
 
   const foreignSellVal =
-    foreignSellVol != null && valuePx != null
-      ? foreignSellVol * valuePx * 1000
-      : base.foreignSellVal ?? null;
+    foreignSellVol != null && px != null
+      ? foreignSellVol * px * 1000
+      : null;
 
-  // matchQtty is supplemental only. Reject absurd values relative to total vol.
-  let matchVol: number | null = base.matchVol ?? null;
+  let matchVol = base.matchVol ?? null;
   const rtMatch = saneNonNegative(rt.matchQtty ?? rt.currentQtty);
-  if (rtMatch != null) {
-    if (base.accumulatedVol == null || base.accumulatedVol <= 0 || rtMatch <= base.accumulatedVol) {
-      matchVol = rtMatch;
-    }
+  if (
+    rtMatch != null &&
+    (
+      base.accumulatedVol == null ||
+      base.accumulatedVol <= 0 ||
+      rtMatch <= base.accumulatedVol
+    )
+  ) {
+    matchVol = rtMatch;
   }
 
-  const currentRoom = saneNonNegative(rt.currentRoom);
-  const totalRoom = saneNonNegative(rt.totalRoom);
-
-  const roomValid =
-    currentRoom != null &&
-    totalRoom != null &&
-    totalRoom > 0 &&
-    currentRoom <= totalRoom * 1.05;
+  // Do not expose room until its current snapshot unit is independently
+  // verified across HOSE/HNX/UPCOM.
+  const currentRoom = base.currentRoom ?? null;
+  const totalRoom = base.totalRoom ?? null;
 
   return {
     ...base,
 
-    // KEEP all HTTP market price/liquidity fields unchanged.
+    // Core values stay from HTTP.
     matchPrice: base.matchPrice,
     change: base.change,
     changePercent: base.changePercent,
@@ -503,18 +521,17 @@ function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote
     lowestPrice: base.lowestPrice,
     avgPrice: base.avgPrice,
 
-    // Supplement only.
+    // VNDIRECT realtime supplements.
     matchVol,
     foreignBuyVol,
     foreignSellVol,
     foreignBuyVal,
     foreignSellVal,
     foreignValueEstimated:
-      foreignBuyVol != null || foreignSellVol != null
-        ? true
-        : base.foreignValueEstimated,
-    currentRoom: roomValid ? currentRoom : base.currentRoom ?? null,
-    totalRoom: roomValid ? totalRoom : base.totalRoom ?? null,
+      foreignBuyVol != null || foreignSellVol != null,
+
+    currentRoom,
+    totalRoom,
     realtimeSnapshotAvailable: true,
     updatedAt: new Date().toISOString()
   };
@@ -523,7 +540,7 @@ function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
   const clean = symbols.map(x => x.trim().toUpperCase());
 
-  const [baseRows, realtime, foreignMap] = await Promise.all([
+  const [baseRows, realtime] = await Promise.all([
     Promise.all(
       clean.map(async (code) => {
         const row = await getLatestStockRow(code);
@@ -558,39 +575,12 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
             } satisfies StockQuote;
       })
     ),
-    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>()),
-    getForeignTradingMap(clean).catch(() => new Map())
+    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>())
   ]);
 
-  return baseRows.map(base => {
-    // First supplement matchVol/room from realtime snapshot, while preserving
-    // authoritative HTTP price/liquidity fields.
-    const merged = mergeRealtimeQuote(base, realtime.get(base.code));
-
-    // Foreign trading must come from FireAnt's explicit per-symbol fields.
-    // Do NOT estimate buy/sell value from VNDIRECT snapshot quantities.
-    const fa = foreignMap.get(base.code);
-    if (!fa) {
-      return {
-        ...merged,
-        foreignBuyVol: null,
-        foreignSellVol: null,
-        foreignBuyVal: null,
-        foreignSellVal: null,
-        foreignValueEstimated: false
-      };
-    }
-
-    return {
-      ...merged,
-      foreignBuyVol: fa.buyForeignQuantity,
-      foreignSellVol: fa.sellForeignQuantity,
-      foreignBuyVal: fa.buyForeignValue,
-      foreignSellVal: fa.sellForeignValue,
-      foreignValueEstimated: false,
-      currentRoom: fa.currentForeignRoom ?? merged.currentRoom ?? null
-    };
-  });
+  return baseRows.map(base =>
+    mergeRealtimeQuote(base, realtime.get(base.code))
+  );
 }
 
 function sma(values: number[], length: number, index: number): number | null {

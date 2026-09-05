@@ -11,7 +11,6 @@ import { validateVietnamQuotes, vietnamQualityConfig } from "./quality.js";
 import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
 import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
-import { getForeignTradingMap } from "./providers/stocks/fireantForeign.js";
 import {
   addWatchlistSymbol,
   createWatchlist,
@@ -297,19 +296,25 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
     if (!symbols.length) return json({ data: [], error: "symbols is required" }, 400);
 
     try {
-      const map = await getForeignTradingMap(symbols);
+      const rows = await getStockQuotes(symbols);
       return json({
-        provider: "fireant-historical-quotes",
+        provider: "vndirect-only",
         requested: symbols,
-        received: [...map.keys()],
-        data: [...map.values()],
+        data: rows.map(row => ({
+          code: row.code,
+          avgPrice: row.avgPrice,
+          foreignBuyVol: row.foreignBuyVol,
+          foreignSellVol: row.foreignSellVol,
+          foreignBuyVal: row.foreignBuyVal,
+          foreignSellVal: row.foreignSellVal,
+          foreignValueEstimated: row.foreignValueEstimated
+        })),
         serverTime: new Date().toISOString()
       });
     } catch (error) {
       return json({
-        provider: "fireant-historical-quotes",
+        provider: "vndirect-only",
         requested: symbols,
-        received: [],
         data: [],
         error: error instanceof Error ? error.message : String(error),
         serverTime: new Date().toISOString()
