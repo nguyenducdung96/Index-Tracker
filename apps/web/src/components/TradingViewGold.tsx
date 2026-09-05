@@ -15,7 +15,6 @@ function useMediaQuery(query: string) {
   useEffect(() => {
     const media = window.matchMedia(query);
     const update = () => setMatches(media.matches);
-
     update();
     media.addEventListener?.("change", update);
     return () => media.removeEventListener?.("change", update);
@@ -60,11 +59,17 @@ function TradingViewWidget({ scriptSrc, config, className = "" }: WidgetProps) {
   return <div ref={ref} className={className} />;
 }
 
-function MobileWorldQuote({ quote }: { quote: WorldGoldQuote | null }) {
+function QuoteSummary({
+  quote,
+  compact = false
+}: {
+  quote: WorldGoldQuote | null;
+  compact?: boolean;
+}) {
   if (!quote) {
     return (
-      <div className="mobileWorldQuote loading">
-        <div>Đang tải XAU/USD…</div>
+      <div className={compact ? "quoteSummary compact loading" : "quoteSummary loading"}>
+        Đang tải XAU/USD…
       </div>
     );
   }
@@ -73,52 +78,67 @@ function MobileWorldQuote({ quote }: { quote: WorldGoldQuote | null }) {
   const abs = quote.changeAbs ?? (
     quote.previousClose != null ? quote.price - quote.previousClose : null
   );
-  const direction = pct == null ? "neutral" : pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral";
+  const direction =
+    pct == null ? "neutral" : pct > 0 ? "positive" : pct < 0 ? "negative" : "neutral";
 
   return (
-    <div className="mobileWorldQuote">
-      <div className="mobileWorldSymbol">XAU/USD</div>
-
-      <div className="mobileWorldMain">
-        <div className="mobileWorldPrice">
-          ${quote.price.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          })}
+    <div className={compact ? "quoteSummary compact" : "quoteSummary"}>
+      <div className="quoteSummaryTop">
+        <div>
+          <div className="quoteSymbol">XAU/USD</div>
+          <div className="quotePrice">
+            ${quote.price.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}
+          </div>
         </div>
 
-        <div className={`mobileWorldChange ${direction}`}>
-          {pct == null
-            ? "—"
-            : `${pct > 0 ? "▲" : pct < 0 ? "▼" : "●"} ${pct > 0 ? "+" : ""}${pct.toFixed(2)}%`}
-        </div>
-      </div>
-
-      <div className="mobileWorldSub">
-        {abs != null && (
-          <span className={direction}>
-            {abs > 0 ? "+" : ""}{abs.toFixed(2)} USD
+        <div className={`quoteChangePill ${direction}`}>
+          <span className="quoteChangePct">
+            {pct == null
+              ? "—"
+              : `${pct > 0 ? "▲" : pct < 0 ? "▼" : "●"} ${pct > 0 ? "+" : ""}${pct.toFixed(2)}%`}
           </span>
-        )}
-        <span>so với đóng cửa phiên trước</span>
+          {abs != null && (
+            <span className="quoteChangeAbs">
+              {abs > 0 ? "+" : ""}{abs.toFixed(2)} USD
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="mobileWorldMeta">
-        <span>Previous close</span>
-        <strong>
-          {quote.previousClose != null
-            ? `$${quote.previousClose.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}`
-            : "—"}
-        </strong>
-      </div>
+      <div className="quoteStats">
+        <div className="quoteStat">
+          <span>Previous close</span>
+          <strong>
+            {quote.previousClose != null
+              ? `$${quote.previousClose.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}`
+              : "—"}
+          </strong>
+        </div>
 
-      <div className="mobileWorldTimestamp">
-        Cập nhật: {new Date(quote.receivedAt ?? quote.observedAt).toLocaleTimeString("vi-VN")}
-        {" · "}
-        feed: {quote.source}
+        <div className="quoteStat">
+          <span>Biến động</span>
+          <strong className={direction}>
+            {pct == null ? "Chưa có dữ liệu" : pct > 0 ? "Tăng" : pct < 0 ? "Giảm" : "Không đổi"}
+          </strong>
+        </div>
+
+        <div className="quoteStat">
+          <span>Nguồn giá app</span>
+          <strong>{quote.source}</strong>
+        </div>
+
+        <div className="quoteStat">
+          <span>Cập nhật</span>
+          <strong>
+            {new Date(quote.receivedAt ?? quote.observedAt).toLocaleTimeString("vi-VN")}
+          </strong>
+        </div>
       </div>
     </div>
   );
@@ -129,14 +149,6 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
   const symbol = String(
     (import.meta as any).env?.VITE_TV_GOLD_SYMBOL ?? "OANDA:XAUUSD"
   );
-
-  const symbolInfoConfig = useMemo(() => ({
-    symbol,
-    width: "100%",
-    locale: "en",
-    colorTheme: "dark",
-    isTransparent: true
-  }), [symbol]);
 
   const chartConfig = useMemo(() => ({
     autosize: true,
@@ -188,12 +200,12 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
           </div>
         </div>
 
-        <MobileWorldQuote quote={quote} />
+        <QuoteSummary quote={quote} compact />
         {links}
 
         <div className="mobileWorldNote">
-          Chart nhúng TradingView không được dùng trên mobile/PWA vì không ổn định
-          trên một số thiết bị. Hai link trên vẫn mở chart đầy đủ.
+          Chart nhúng TradingView không dùng trên mobile/PWA để tránh lỗi màn hình đen.
+          Mở TradingView hoặc Trading Economics để xem chart đầy đủ.
         </div>
       </section>
     );
@@ -208,19 +220,17 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
             <span className="liveBadge live">● LIVE</span>
             <span className="freeBadge">FREE</span>
           </div>
-          <div className="sectionTitle tvTitle">TradingView realtime · OANDA</div>
-          <div className="unit">Giá và chart được TradingView render trực tiếp.</div>
+          <div className="sectionTitle tvTitle">Vàng thế giới · OANDA</div>
+          <div className="unit">
+            Giá và % biến động của app phía trên · TradingView chart phía dưới.
+          </div>
         </div>
 
         {links}
       </div>
 
-      <div className="tvQuoteWidget">
-        <TradingViewWidget
-          scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js"
-          config={symbolInfoConfig}
-          className="tvSymbolInfo"
-        />
+      <div className="desktopQuotePanel">
+        <QuoteSummary quote={quote} />
       </div>
 
       <div className="tvChartWidget">
@@ -232,7 +242,9 @@ export function TradingViewGoldLive({ quote }: { quote: WorldGoldQuote | null })
       </div>
 
       <div className="tvNotice">
-        <strong>Nguồn chart:</strong> TradingView · {symbol}
+        <strong>Chart:</strong> TradingView · {symbol}
+        <span> · </span>
+        <span>Giá/% app: {quote?.source ?? "đang tải"}</span>
       </div>
     </section>
   );

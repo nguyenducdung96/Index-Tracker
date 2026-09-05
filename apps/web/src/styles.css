@@ -632,3 +632,359 @@ footer {
     font-size: clamp(13px, 4vw, 15px);
   }
 }
+
+
+/* ==========================================================
+   V7.6 — UNIFIED DARK WORLD-GOLD QUOTE + DIRECTION COLORS
+   ========================================================== */
+
+/* Remove old white TradingView symbol-info area entirely. */
+.tvQuoteWidget,
+.tvSymbolInfo {
+  display: none !important;
+}
+
+.tvGoldCard {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(245, 183, 0, .08), transparent 26%),
+    linear-gradient(180deg, #0b1829 0%, #081522 100%);
+}
+
+.tvGoldHeader {
+  border-bottom: 1px solid #20344d;
+}
+
+.desktopQuotePanel {
+  padding: 14px 16px;
+  border-bottom: 1px solid #20344d;
+  background:
+    linear-gradient(135deg, rgba(250, 190, 20, .06), rgba(34, 197, 94, .025) 45%, rgba(59, 130, 246, .035));
+}
+
+.quoteSummary {
+  width: 100%;
+  max-width: 100%;
+}
+
+.quoteSummary.loading {
+  padding: 22px 0;
+  color: #8da8c2;
+}
+
+.quoteSummaryTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.quoteSymbol {
+  color: #91acc7;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.quotePrice {
+  margin-top: 5px;
+  color: #f8fafc;
+  font-size: clamp(36px, 4.4vw, 54px);
+  line-height: .98;
+  font-weight: 900;
+  letter-spacing: -.045em;
+}
+
+.quoteChangePill {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 132px;
+  padding: 11px 13px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
+}
+
+.quoteChangePill.positive {
+  background: rgba(22, 229, 138, .07);
+  box-shadow: inset 0 0 0 1px rgba(22,229,138,.03);
+}
+
+.quoteChangePill.negative {
+  background: rgba(255, 81, 101, .07);
+  box-shadow: inset 0 0 0 1px rgba(255,81,101,.03);
+}
+
+.quoteChangePct {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+}
+
+.quoteChangeAbs {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: .9;
+}
+
+.quoteStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.quoteStat {
+  padding: 9px 10px;
+  border: 1px solid #1b3047;
+  border-radius: 9px;
+  background: rgba(5, 16, 29, .64);
+}
+
+.quoteStat span {
+  display: block;
+  color: #6988a5;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+
+.quoteStat strong {
+  display: block;
+  margin-top: 4px;
+  color: #e5eef7;
+  font-size: 12px;
+}
+
+.positive {
+  color: #16e58a !important;
+}
+
+.negative {
+  color: #ff5165 !important;
+}
+
+.neutral {
+  color: #cbd5e1 !important;
+}
+
+/* Color accents throughout the app */
+.tabs button.active {
+  border-color: rgba(245, 183, 0, .65);
+  background: linear-gradient(180deg, #253553, #172841);
+  box-shadow: inset 0 0 0 1px rgba(245,183,0,.08);
+}
+
+.liveBadge.live {
+  border-color: rgba(22,229,138,.35);
+  background: rgba(22,229,138,.06);
+}
+
+.freeBadge {
+  border-color: rgba(245,183,0,.35);
+  background: rgba(245,183,0,.06);
+  color: #f7c84b;
+}
+
+.versionBadge {
+  border-color: rgba(91, 162, 255, .35);
+  background: rgba(91,162,255,.055);
+}
+
+.vnMobileItem,
+.vnCompactTable tbody tr {
+  transition: background .15s ease;
+}
+
+.vnCompactTable tbody tr:hover {
+  background: rgba(93, 169, 255, .025);
+}
+
+.vnBrandLink,
+.goldReferenceLinks a {
+  border-color: #315274;
+  background: linear-gradient(180deg, #0e2135, #0a1828);
+}
+
+@media (max-width: 760px) {
+  .worldMobileCard {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(245, 183, 0, .08), transparent 38%),
+      linear-gradient(180deg, #0b1829 0%, #081522 100%);
+  }
+
+  .quoteSummary.compact {
+    padding: 15px 11px;
+    border-top: 1px solid #20344d;
+    border-bottom: 1px solid #20344d;
+    background: rgba(5, 16, 29, .52);
+  }
+
+  .quoteSummary.compact .quoteSummaryTop {
+    gap: 8px;
+  }
+
+  .quoteSummary.compact .quotePrice {
+    font-size: clamp(30px, 10vw, 40px);
+  }
+
+  .quoteSummary.compact .quoteChangePill {
+    min-width: 108px;
+    padding: 9px 9px;
+  }
+
+  .quoteSummary.compact .quoteChangePct {
+    font-size: 16px;
+  }
+
+  .quoteSummary.compact .quoteChangeAbs {
+    font-size: 9px;
+  }
+
+  .quoteSummary.compact .quoteStats {
+    grid-template-columns: 1fr 1fr;
+    margin-top: 11px;
+  }
+
+  .quoteSummary.compact .quoteStat {
+    padding: 8px;
+  }
+
+  .quoteSummary.compact .quoteStat strong {
+    font-size: 11px;
+  }
+}
+
+
+/* ==========================================================
+   V7.7 — VIETNAM GOLD COLOR REFINEMENT
+   ========================================================== */
+
+.vnSimpleCard {
+  background:
+    radial-gradient(circle at 4% 0%, rgba(245, 183, 0, .055), transparent 22%),
+    linear-gradient(180deg, #0a1626 0%, #081522 100%);
+}
+
+.vnBrandBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid rgba(245, 183, 0, .28);
+  border-radius: 999px;
+  background: rgba(245, 183, 0, .055);
+  color: #f6d36b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .015em;
+}
+
+.vnProductText {
+  color: #dce8f3;
+  font-weight: 700;
+}
+
+.buyHeader {
+  color: #7ff0b8 !important;
+}
+
+.sellHeader {
+  color: #ffd166 !important;
+}
+
+.buyValue {
+  color: #22e28d;
+  font-weight: 900;
+}
+
+.sellValue {
+  color: #ffc857;
+  font-weight: 900;
+}
+
+.officialPriceLink,
+.vnBrandLink {
+  color: #7cc4ff !important;
+  border-color: rgba(91, 162, 255, .35) !important;
+  background:
+    linear-gradient(180deg, rgba(31, 78, 121, .20), rgba(12, 25, 41, .92)) !important;
+}
+
+.vnCompactTable tbody tr {
+  transition:
+    background .16s ease,
+    box-shadow .16s ease;
+}
+
+.vnCompactTable tbody tr:hover {
+  background:
+    linear-gradient(90deg, rgba(245, 183, 0, .025), rgba(59, 130, 246, .025));
+}
+
+.vnMobileItem {
+  position: relative;
+  overflow: hidden;
+  border-color: #20364f;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(245, 183, 0, .045), transparent 36%),
+    linear-gradient(180deg, #091827 0%, #081522 100%);
+}
+
+.vnMobileItem::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background:
+    linear-gradient(180deg, #f2c94c 0%, #3b82f6 100%);
+  opacity: .8;
+}
+
+.vnMobileBrand {
+  color: #f6d36b;
+}
+
+.buyCell {
+  border: 1px solid rgba(34, 226, 141, .18);
+  background:
+    linear-gradient(180deg, rgba(34, 226, 141, .07), rgba(12, 26, 43, .95));
+}
+
+.sellCell {
+  border: 1px solid rgba(255, 200, 87, .20);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 87, .07), rgba(12, 26, 43, .95));
+}
+
+.buyCell span {
+  color: #66e6aa;
+}
+
+.sellCell span {
+  color: #eac768;
+}
+
+.buyCell strong {
+  color: #22e28d;
+}
+
+.sellCell strong {
+  color: #ffc857;
+}
+
+@media (max-width: 760px) {
+  .vnSimpleCard {
+    padding: 11px;
+  }
+
+  .vnMobileItem {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.012),
+      0 8px 22px rgba(0,0,0,.08);
+  }
+
+  .vnBrandLink {
+    background:
+      linear-gradient(180deg, rgba(37, 99, 235, .14), rgba(12, 25, 41, .96)) !important;
+  }
+}

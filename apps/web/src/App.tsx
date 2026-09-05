@@ -5,7 +5,7 @@ import { WorldCard } from "./components/WorldCard";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 
-const APP_VERSION = "V7.5";
+const APP_VERSION = "V7.7";
 
 const empty: Dashboard = {
   world: null,

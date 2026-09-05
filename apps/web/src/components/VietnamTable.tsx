@@ -33,23 +33,33 @@ export function VietnamTable({
             <tr>
               <th>Hãng</th>
               <th>Sản phẩm</th>
-              <th>Mua</th>
-              <th>Bán</th>
+              <th className="buyHeader">Mua</th>
+              <th className="sellHeader">Bán</th>
               <th>Link giá</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
               const url = officialUrl(row.brand, providers);
+
               return (
                 <tr key={`${row.brand}-${row.product}-${index}`}>
-                  <td><strong>{row.brand}</strong></td>
-                  <td>{productLabel(row.product)}</td>
-                  <td>{fmt.format(row.buy)}</td>
-                  <td>{fmt.format(row.sell)}</td>
+                  <td>
+                    <span className="vnBrandBadge">{row.brand}</span>
+                  </td>
+                  <td>
+                    <span className="vnProductText">{productLabel(row.product)}</span>
+                  </td>
+                  <td className="buyValue">{fmt.format(row.buy)}</td>
+                  <td className="sellValue">{fmt.format(row.sell)}</td>
                   <td>
                     {url ? (
-                      <a href={url} target="_blank" rel="noreferrer">
+                      <a
+                        className="officialPriceLink"
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         Chính thức ↗
                       </a>
                     ) : "—"}
@@ -64,6 +74,7 @@ export function VietnamTable({
       <div className="vnMobileList">
         {rows.map((row, index) => {
           const url = officialUrl(row.brand, providers);
+
           return (
             <article
               className="vnMobileItem"
@@ -88,12 +99,12 @@ export function VietnamTable({
               </div>
 
               <div className="vnMobilePrices">
-                <div className="vnPriceCell">
+                <div className="vnPriceCell buyCell">
                   <span>Mua</span>
                   <strong>{fmt.format(row.buy)}</strong>
                 </div>
 
-                <div className="vnPriceCell">
+                <div className="vnPriceCell sellCell">
                   <span>Bán</span>
                   <strong>{fmt.format(row.sell)}</strong>
                 </div>
