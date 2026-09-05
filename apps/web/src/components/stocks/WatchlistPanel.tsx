@@ -3,19 +3,19 @@ import type { StockQuote, Watchlist } from "../../types";
 
 type SortKey = "change" | "value" | "code";
 
-function fmtVol(v: number | null) {
+function fmtVol(v: number | null | undefined) {
   if (v == null) return "—";
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
   return String(Math.round(v));
 }
 
-function fmtVal(v: number | null) {
+function fmtVal(v: number | null | undefined) {
   if (v == null) return "—";
-  return `${(v / 1_000_000_000).toFixed(v >= 100_000_000_000 ? 0 : 1)} Tỷ`;
+  return `${(v / 1_000_000_000).toFixed(Math.abs(v) >= 100_000_000_000 ? 0 : 1)} Tỷ`;
 }
 
-function moveClass(v: number | null) {
+function moveClass(v: number | null | undefined) {
   if (v == null || v === 0) return "ref";
   return v > 0 ? "up" : "down";
 }
@@ -60,14 +60,14 @@ export function WatchlistPanel({
   }
 
   async function addSymbol() {
-    const s = newSymbol.trim().toUpperCase();
-    if (!s) return;
-    await onAddSymbol(s);
+    const symbol = newSymbol.trim().toUpperCase();
+    if (!symbol) return;
+    await onAddSymbol(symbol);
     setNewSymbol("");
   }
 
   return (
-    <section className="stockPanel">
+    <section className="stockPanel watchlistPanel">
       <div className="watchlistToolbar">
         <div className="watchlistTabs">
           {watchlists.map(w => (
@@ -105,23 +105,24 @@ export function WatchlistPanel({
         <button onClick={addSymbol}>Thêm</button>
       </div>
 
-      <div className="watchlistHeader stockGridRow">
+      <div className="watchlistHeader watchGrid">
         <span>Mã / Sàn</span>
         <span>Giá / Biến động</span>
         <span>Thanh khoản</span>
+        <span>NN Mua / Bán</span>
         <span></span>
       </div>
 
       <div className="watchlistRows">
         {sorted.map(q => (
-          <div
-            className="watchlistRow stockGridRow"
+          <article
+            className="watchlistRow watchGrid"
             key={q.code}
             onClick={() => onOpenSymbol(q.code)}
           >
-            <div>
+            <div className="watchIdentity">
               <div className="stockCodeLine">
-                <strong>{q.code}</strong>
+                <strong className={moveClass(q.changePercent)}>{q.code}</strong>
                 <a
                   href={`https://www.fireant.vn/Home/StockDetail/${q.code}`}
                   target="_blank"
@@ -135,7 +136,7 @@ export function WatchlistPanel({
               <small>{q.floor}</small>
             </div>
 
-            <div>
+            <div className="watchPrice">
               <strong className={moveClass(q.changePercent)}>
                 {q.matchPrice == null ? "—" : q.matchPrice.toLocaleString("vi-VN")}
               </strong>
@@ -146,9 +147,20 @@ export function WatchlistPanel({
               </div>
             </div>
 
-            <div>
+            <div className="watchLiquidity">
+              <span className="mobileMetricLabel">Thanh khoản</span>
               <strong>{fmtVol(q.accumulatedVol)} cp</strong>
               <small>{fmtVal(q.accumulatedVal)}</small>
+            </div>
+
+            <div className="watchForeign">
+              <span className="mobileMetricLabel">
+                NN Mua / Bán{q.foreignValueEstimated ? " (ước tính)" : ""}
+              </span>
+              <div>
+                <span className="foreignBuy">M {fmtVal(q.foreignBuyVal)}</span>
+                <span className="foreignSell">B {fmtVal(q.foreignSellVal)}</span>
+              </div>
             </div>
 
             <button
@@ -161,7 +173,7 @@ export function WatchlistPanel({
             >
               ×
             </button>
-          </div>
+          </article>
         ))}
       </div>
     </section>

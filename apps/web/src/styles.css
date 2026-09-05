@@ -1550,3 +1550,255 @@ footer,
   /* Requirement: technical chart only on desktop. */
   .stockChartPanel { display:none; }
 }
+
+
+/* ==========================================================
+   V8.2 — INDEX + RESPONSIVE WATCHLIST + FOREIGN FLOW
+   ========================================================== */
+
+.marketTickerTwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: visible;
+}
+
+.marketTickerTwo .indexTickerCard {
+  min-width: 0;
+  width: 100%;
+}
+
+.indexLiquidity {
+  margin-top: 7px;
+  color: #7896b3;
+  font-size: 9px;
+}
+
+.indexBreadth {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.watchlistPanel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.watchGrid {
+  display: grid;
+  grid-template-columns:
+    minmax(92px, .75fr)
+    minmax(135px, 1.05fr)
+    minmax(125px, 1fr)
+    minmax(165px, 1.15fr)
+    30px;
+  gap: 10px;
+  align-items: center;
+}
+
+.watchlistHeader {
+  padding: 8px 9px;
+}
+
+.watchlistRow {
+  min-width: 0;
+}
+
+.watchIdentity,
+.watchPrice,
+.watchLiquidity,
+.watchForeign {
+  min-width: 0;
+}
+
+.watchLiquidity > strong,
+.watchLiquidity > small {
+  display: block;
+}
+
+.watchForeign > div {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.foreignBuy,
+.foreignSell {
+  display: inline-flex;
+  padding: 3px 6px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.foreignBuy {
+  color: #18e58c;
+  background: rgba(24,229,140,.07);
+}
+
+.foreignSell {
+  color: #ff5367;
+  background: rgba(255,83,103,.07);
+}
+
+.mobileMetricLabel {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .marketTickerTwo {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .marketTickerTwo .indexTickerCard {
+    padding: 9px;
+    min-width: 0;
+  }
+
+  .marketTickerTwo .indexTickerTop {
+    gap: 4px;
+  }
+
+  .marketTickerTwo .indexTickerTop strong {
+    font-size: 10px;
+  }
+
+  .marketTickerTwo .indexTickerTop > span {
+    font-size: 14px;
+  }
+
+  .marketTickerTwo .indexMove {
+    font-size: 9px;
+  }
+
+  .marketTickerTwo .indexBreadth {
+    gap: 7px;
+    font-size: 8px;
+  }
+
+  .watchlistPanel {
+    padding: 9px;
+  }
+
+  .watchlistHeader {
+    display: none !important;
+  }
+
+  .watchlistRows {
+    display: grid;
+    gap: 7px;
+  }
+
+  .watchGrid,
+  .watchlistRow.watchGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 26px;
+    grid-template-areas:
+      "identity price remove"
+      "liquidity foreign remove";
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 8px;
+    border: 1px solid #1d3249;
+    border-radius: 10px;
+    background: #081522;
+  }
+
+  .watchIdentity {
+    grid-area: identity;
+  }
+
+  .watchPrice {
+    grid-area: price;
+    text-align: right;
+  }
+
+  .watchPrice .stockMoveBadge {
+    margin-left: auto;
+  }
+
+  .watchLiquidity {
+    grid-area: liquidity;
+    padding-top: 7px;
+    border-top: 1px solid #152a40;
+  }
+
+  .watchForeign {
+    grid-area: foreign;
+    padding-top: 7px;
+    border-top: 1px solid #152a40;
+    text-align: right;
+  }
+
+  .watchForeign > div {
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .removeSymbol {
+    grid-area: remove;
+    align-self: stretch;
+    width: 26px;
+    padding: 0;
+  }
+
+  .mobileMetricLabel {
+    display: block;
+    margin-bottom: 4px;
+    color: #5f7f9e;
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  .watchLiquidity strong {
+    font-size: 10px;
+  }
+
+  .watchLiquidity small {
+    margin-top: 2px;
+    font-size: 8px;
+  }
+
+  .foreignBuy,
+  .foreignSell {
+    padding: 3px 4px;
+    font-size: 7.5px;
+  }
+
+  .stockCodeLine strong {
+    font-size: 13px;
+  }
+
+  .stockMoveBadge {
+    font-size: 8px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 390px) {
+  .marketTickerTwo .indexTickerCard {
+    padding: 8px 7px;
+  }
+
+  .marketTickerTwo .indexBreadth {
+    gap: 5px;
+  }
+
+  .watchlistRow.watchGrid {
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr) 22px;
+    padding: 9px 6px;
+    gap: 6px;
+  }
+
+  .foreignBuy,
+  .foreignSell {
+    font-size: 7px;
+  }
+}

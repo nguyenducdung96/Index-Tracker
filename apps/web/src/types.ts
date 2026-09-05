@@ -108,6 +108,11 @@ export type StockQuote = {
   highestPrice?: number | null;
   lowestPrice?: number | null;
   avgPrice?: number | null;
+  foreignBuyVol?: number | null;
+  foreignSellVol?: number | null;
+  foreignBuyVal?: number | null;
+  foreignSellVal?: number | null;
+  foreignValueEstimated?: boolean;
   updatedAt: string;
 };
 

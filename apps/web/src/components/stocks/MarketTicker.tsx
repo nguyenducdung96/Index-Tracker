@@ -13,9 +13,11 @@ function fmtValue(v: number | null) {
 }
 
 export function MarketTicker({ rows }: { rows: StockIndexQuote[] }) {
+  const visible = rows.filter(x => x.code === "VNINDEX" || x.code === "VN30");
+
   return (
-    <div className="marketTicker" aria-label="Chỉ số thị trường">
-      {rows.map((x) => (
+    <div className="marketTicker marketTickerTwo" aria-label="Chỉ số thị trường">
+      {visible.map((x) => (
         <a
           className="indexTickerCard"
           key={x.code}
@@ -29,16 +31,19 @@ export function MarketTicker({ rows }: { rows: StockIndexQuote[] }) {
               {x.indexValue == null ? "—" : x.indexValue.toLocaleString("en-US", { maximumFractionDigits: 2 })}
             </span>
           </div>
+
           <div className={`indexMove ${moveClass(x.changePercent)}`}>
             {x.change == null ? "—" : `${x.change > 0 ? "+" : ""}${x.change.toFixed(2)}`}
             {" · "}
             {x.changePercent == null ? "—" : `${x.changePercent > 0 ? "+" : ""}${x.changePercent.toFixed(2)}%`}
           </div>
-          <div className="indexMeta">
-            <span>GT {fmtValue(x.accumulatedVal)}</span>
-            <span className="breadthUp">↑{x.advances ?? "—"}</span>
-            <span className="breadthRef">■{x.noChanges ?? "—"}</span>
-            <span className="breadthDown">↓{x.declines ?? "—"}</span>
+
+          <div className="indexLiquidity">GT {fmtValue(x.accumulatedVal)}</div>
+
+          <div className="indexBreadth">
+            <span className="breadthUp" title="Số mã tăng">▲ {x.advances ?? "—"}</span>
+            <span className="breadthRef" title="Số mã tham chiếu">■ {x.noChanges ?? "—"}</span>
+            <span className="breadthDown" title="Số mã giảm">▼ {x.declines ?? "—"}</span>
           </div>
         </a>
       ))}

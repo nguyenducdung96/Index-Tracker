@@ -120,8 +120,6 @@ async function getStockRows(code: string, days = 420, size = 5000) {
 
 const INDEX_MAP = [
   { code: "VNINDEX", name: "VN-Index", query: "VNINDEX" },
-  { code: "HNXINDEX", name: "HNX-Index", query: "HNXINDEX" },
-  { code: "UPCOMINDEX", name: "UPCoM-Index", query: "UPCOMINDEX" },
   { code: "VN30", name: "VN30", query: "VN30" }
 ] as const;
 
@@ -197,6 +195,7 @@ function indexFromRow(meta: typeof INDEX_MAP[number], row: any): StockIndexQuote
     ),
     noChanges: n(
       row?.noChanges,
+      row?.noChange,
       row?.unchanged,
       row?.steady,
       row?.totalSteadyStock,
@@ -256,6 +255,49 @@ export async function getMarketIndexes(): Promise<StockIndexQuote[]> {
   return Promise.all(INDEX_MAP.map(getIndex));
 }
 
+
+function foreignValueFromRow(
+  row: any,
+  side: "buy" | "sell",
+  qty: number | null,
+  avgPrice: number | null,
+  currentPrice: number | null
+): { value: number | null; estimated: boolean } {
+  const direct =
+    side === "buy"
+      ? n(
+          row?.buyForeignVal,
+          row?.buyForeignValue,
+          row?.foreignBuyVal,
+          row?.foreignBuyValue,
+          row?.foreignBuyValueMatched
+        )
+      : n(
+          row?.sellForeignVal,
+          row?.sellForeignValue,
+          row?.foreignSellVal,
+          row?.foreignSellValue,
+          row?.foreignSellValueMatched
+        );
+
+  if (direct != null) {
+    return { value: direct, estimated: false };
+  }
+
+  // Public VNDIRECT price-feed exposes foreign BUY/SELL QUANTITY.
+  // When exact side value is absent, estimate notional using average price
+  // (fallback current price). Equity quote prices are in thousand VND.
+  const px = avgPrice ?? currentPrice;
+  if (qty != null && px != null) {
+    return {
+      value: qty * px * 1000,
+      estimated: true
+    };
+  }
+
+  return { value: null, estimated: false };
+}
+
 function quoteFromRow(code: string, row: any): StockQuote {
   const matchPrice = priceScale(n(
     row?.matchPrice,
@@ -269,6 +311,41 @@ function quoteFromRow(code: string, row: any): StockQuote {
     row?.referencePrice,
     row?.refPrice
   ));
+
+  const avgPrice = priceScale(n(
+    row?.average,
+    row?.averagePrice,
+    row?.avgPrice,
+    row?.adAverage
+  ));
+
+  const foreignBuyVol = n(
+    row?.buyForeignQtty,
+    row?.foreignBuyQtty,
+    row?.foreignBuyVol
+  );
+
+  const foreignSellVol = n(
+    row?.sellForeignQtty,
+    row?.foreignSellQtty,
+    row?.foreignSellVol
+  );
+
+  const foreignBuy = foreignValueFromRow(
+    row,
+    "buy",
+    foreignBuyVol,
+    avgPrice,
+    matchPrice
+  );
+
+  const foreignSell = foreignValueFromRow(
+    row,
+    "sell",
+    foreignSellVol,
+    avgPrice,
+    matchPrice
+  );
 
   let change = priceScale(n(
     row?.change,
@@ -322,12 +399,12 @@ function quoteFromRow(code: string, row: any): StockQuote {
     openPrice: priceScale(n(row?.open, row?.openPrice, row?.adOpen)),
     highestPrice: priceScale(n(row?.high, row?.highPrice, row?.adHigh)),
     lowestPrice: priceScale(n(row?.low, row?.lowPrice, row?.adLow)),
-    avgPrice: priceScale(n(
-      row?.average,
-      row?.averagePrice,
-      row?.avgPrice,
-      row?.adAverage
-    )),
+    avgPrice,
+    foreignBuyVol,
+    foreignSellVol,
+    foreignBuyVal: foreignBuy.value,
+    foreignSellVal: foreignSell.value,
+    foreignValueEstimated: foreignBuy.estimated || foreignSell.estimated,
     updatedAt: new Date().toISOString()
   };
 }
@@ -358,6 +435,11 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
             highestPrice: null,
             lowestPrice: null,
             avgPrice: null,
+            foreignBuyVol: null,
+            foreignSellVol: null,
+            foreignBuyVal: null,
+            foreignSellVal: null,
+            foreignValueEstimated: false,
             updatedAt: new Date().toISOString()
           };
     })
