@@ -4,7 +4,7 @@
 - Worker serves `apps/web/dist` through Workers Static Assets.
 - API remains under `/api/*` on the same origin.
 - D1 remains bound as `DB`.
-- CORS configuration removed
+- CORS configuration removed.
 - Frontend uses same-origin API in production.
 - Root `wrangler.jsonc` is the single Cloudflare deployment config.
 - GitHub/Cloudflare Workers Builds is the recommended production workflow.
