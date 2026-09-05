@@ -9,7 +9,7 @@
     "cheerio": "^1.1.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260903.0",
+    "@cloudflare/workers-types": "^5.20260904.1",
     "typescript": "^5.8.3"
   }
 }
