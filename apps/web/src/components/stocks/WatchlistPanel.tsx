@@ -20,6 +20,14 @@ function moveClass(v: number | null | undefined) {
   return v > 0 ? "up" : "down";
 }
 
+
+function ratioClass(v: number | null | undefined) {
+  if (v == null) return "ratioNeutral";
+  if (v >= 1.5) return "ratioHot";
+  if (v >= 1.0) return "ratioStrong";
+  return "ratioNeutral";
+}
+
 export function WatchlistPanel({
   watchlists,
   activeId,
@@ -151,6 +159,13 @@ export function WatchlistPanel({
               <span className="mobileMetricLabel">Thanh khoản</span>
               <strong>{fmtVol(q.accumulatedVol)} cp</strong>
               <small>{fmtVal(q.accumulatedVal)}</small>
+              <div
+                className={`volAvg20 ${ratioClass(q.volumeVsAvg20)}`}
+                title={q.avg20DVol == null ? "Chưa có Avg20D" : `Avg20D: ${fmtVol(q.avg20DVol)} cp`}
+              >
+                <span>Vol / Avg20D</span>
+                <b>{q.volumeVsAvg20 == null ? "—" : `${q.volumeVsAvg20.toFixed(2)}x`}</b>
+              </div>
             </div>
 
             <div className="watchForeign" title="VNDIRECT: KL NN realtime; GT = KL × giá bình quân">

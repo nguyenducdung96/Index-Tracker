@@ -533,10 +533,60 @@ function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote
   };
 }
 
+
+type Avg20CacheEntry = {
+  avg20DVol: number | null;
+  expiresAt: number;
+};
+
+const avg20DCache = new Map<string, Avg20CacheEntry>();
+
+async function getAvg20DVolume(symbol: string): Promise<number | null> {
+  const code = symbol.toUpperCase();
+  const cached = avg20DCache.get(code);
+
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.avg20DVol;
+  }
+
+  try {
+    /*
+     * Use daily historical rows directly, not intraday quote requests.
+     * The last 20 completed sessions form Avg20D.
+     *
+     * Cache 30 minutes: Avg20D changes only after a trading session closes,
+     * while accumulatedVol keeps refreshing through the normal watchlist poll.
+     */
+    const rows = await getStockRows(code, 60, 100);
+    const vols = rows
+      .map(row => n(row?.nmVolume, row?.volume))
+      .filter((x): x is number => x != null && Number.isFinite(x) && x > 0);
+
+    const completed = vols.slice(-20);
+    const avg =
+      completed.length > 0
+        ? completed.reduce((sum, x) => sum + x, 0) / completed.length
+        : null;
+
+    avg20DCache.set(code, {
+      avg20DVol: avg,
+      expiresAt: Date.now() + 30 * 60_000
+    });
+
+    return avg;
+  } catch {
+    avg20DCache.set(code, {
+      avg20DVol: null,
+      expiresAt: Date.now() + 5 * 60_000
+    });
+    return null;
+  }
+}
+
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
   const clean = symbols.map(x => x.trim().toUpperCase());
 
-  const [baseRows, realtime] = await Promise.all([
+  const [baseRows, realtime, avg20Rows] = await Promise.all([
     Promise.all(
       clean.map(async (code) => {
         const row = await getLatestStockRow(code);
@@ -559,6 +609,8 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
               highestPrice: null,
               lowestPrice: null,
               avgPrice: null,
+              avg20DVol: null,
+              volumeVsAvg20: null,
               foreignBuyVol: null,
               foreignSellVol: null,
               foreignBuyVal: null,
@@ -571,12 +623,25 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
             } satisfies StockQuote;
       })
     ),
-    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>())
+    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>()),
+    Promise.all(clean.map(code => getAvg20DVolume(code)))
   ]);
 
-  return baseRows.map(base =>
-    mergeRealtimeQuote(base, realtime.get(base.code))
-  );
+  return baseRows.map((base, i) => {
+    const merged = mergeRealtimeQuote(base, realtime.get(base.code));
+    const avg20DVol = avg20Rows[i] ?? null;
+
+    return {
+      ...merged,
+      avg20DVol,
+      volumeVsAvg20:
+        avg20DVol != null &&
+        avg20DVol > 0 &&
+        merged.accumulatedVol != null
+          ? merged.accumulatedVol / avg20DVol
+          : null
+    };
+  });
 }
 
 function sma(values: number[], length: number, index: number): number | null {

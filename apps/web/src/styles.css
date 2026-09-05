@@ -1802,3 +1802,65 @@ footer,
     font-size: 7px;
   }
 }
+
+
+/* ==========================================================
+   V8.5 — WATCHLIST VOL / AVG20D
+   ========================================================== */
+
+.volAvg20 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 3px 6px;
+  border: 1px solid #1c344d;
+  border-radius: 7px;
+  background: rgba(7, 19, 31, .7);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.volAvg20 span {
+  color: #6988a6;
+}
+
+.volAvg20 b {
+  font-size: 9px;
+}
+
+.volAvg20.ratioNeutral b {
+  color: #8fb5d8;
+}
+
+.volAvg20.ratioStrong {
+  border-color: rgba(24,229,140,.24);
+  background: rgba(24,229,140,.05);
+}
+
+.volAvg20.ratioStrong b {
+  color: #18e58c;
+}
+
+.volAvg20.ratioHot {
+  border-color: rgba(242,201,76,.30);
+  background: rgba(242,201,76,.07);
+}
+
+.volAvg20.ratioHot b {
+  color: #f2c94c;
+}
+
+@media (max-width: 760px) {
+  .watchLiquidity .volAvg20 {
+    margin-top: 5px;
+    padding: 3px 5px;
+    font-size: 7px;
+    max-width: 100%;
+  }
+
+  .watchLiquidity .volAvg20 b {
+    font-size: 8px;
+  }
+}

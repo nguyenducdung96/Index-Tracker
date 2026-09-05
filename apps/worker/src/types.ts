@@ -72,11 +72,16 @@ export type StockQuote = {
   highestPrice?: number | null;
   lowestPrice?: number | null;
   avgPrice?: number | null;
+  avg20DVol?: number | null;
+  volumeVsAvg20?: number | null;
   foreignBuyVol?: number | null;
   foreignSellVol?: number | null;
   foreignBuyVal?: number | null;
   foreignSellVal?: number | null;
   foreignValueEstimated?: boolean;
+  currentRoom?: number | null;
+  totalRoom?: number | null;
+  realtimeSnapshotAvailable?: boolean;
   updatedAt: string;
 };
 
