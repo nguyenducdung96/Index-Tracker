@@ -1947,3 +1947,38 @@ footer,
     font-size: 7px;
   }
 }
+
+
+/* ==========================================================
+   V8.6.1 — OFFICIAL COMPANY HOMEPAGE BUTTON
+   ========================================================== */
+
+.companyHomepageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 7px 10px;
+  border: 1px solid #2c5275;
+  border-radius: 8px;
+  background: #0a1b2c;
+  color: #72c4ff !important;
+  font-size: 10px;
+  font-weight: 750;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.companyHomepageButton:hover {
+  border-color: #4b8fc5;
+  background: #0d2439;
+  color: #a7dcff !important;
+}
+
+@media (max-width:760px) {
+  .companyHomepageButton {
+    min-height: 28px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+}

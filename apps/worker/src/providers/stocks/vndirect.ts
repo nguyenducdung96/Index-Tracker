@@ -301,17 +301,56 @@ function foreignValueFromRow(
 }
 
 
-type CompanyMetaCacheEntry = {
+type CompanyMeta = {
   name: string | null;
+  website: string | null;
+};
+
+type CompanyMetaCacheEntry = {
+  meta: CompanyMeta;
   expiresAt: number;
 };
 
 const companyMetaCache = new Map<string, CompanyMetaCacheEntry>();
 
-async function getCompanyName(code: string): Promise<string | null> {
+function normalizeOfficialWebsite(value: unknown): string | null {
+  let raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  // Reject non-web/contact values.
+  if (
+    raw.includes("@") ||
+    raw.startsWith("mailto:") ||
+    raw.startsWith("tel:")
+  ) {
+    return null;
+  }
+
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+
+  try {
+    const url = new URL(raw);
+
+    // Only normal public web URLs.
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    if (!url.hostname || !url.hostname.includes(".")) return null;
+
+    // Remove query/hash so the button opens the company's main website cleanly.
+    url.search = "";
+    url.hash = "";
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function getCompanyMeta(code: string): Promise<CompanyMeta> {
   const symbol = code.toUpperCase();
   const cached = companyMetaCache.get(symbol);
-  if (cached && Date.now() < cached.expiresAt) return cached.name;
+  if (cached && Date.now() < cached.expiresAt) return cached.meta;
 
   try {
     const url = new URL(SECURITIES_URL);
@@ -321,6 +360,7 @@ async function getCompanyName(code: string): Promise<string | null> {
 
     const payload = await fetchJson(url);
     const row = dataRows(payload)[0] ?? null;
+
     const name = row
       ? s(
           row?.companyName,
@@ -331,18 +371,33 @@ async function getCompanyName(code: string): Promise<string | null> {
         )
       : null;
 
+    const website = row
+      ? normalizeOfficialWebsite(
+          row?.website ??
+          row?.websiteAddress ??
+          row?.companyWebsite ??
+          row?.webSite ??
+          row?.url ??
+          row?.homepage ??
+          row?.homePage
+        )
+      : null;
+
+    const meta = { name, website };
+
     companyMetaCache.set(symbol, {
-      name,
+      meta,
       expiresAt: Date.now() + 6 * 60 * 60_000
     });
 
-    return name;
+    return meta;
   } catch {
+    const meta = { name: null, website: null };
     companyMetaCache.set(symbol, {
-      name: null,
+      meta,
       expiresAt: Date.now() + 30 * 60_000
     });
-    return null;
+    return meta;
   }
 }
 
@@ -631,7 +686,7 @@ async function getAvg20DVolume(symbol: string): Promise<number | null> {
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
   const clean = symbols.map(x => x.trim().toUpperCase());
 
-  const [baseRows, realtime, avg20Rows, companyNames] = await Promise.all([
+  const [baseRows, realtime, avg20Rows, companyMetaRows] = await Promise.all([
     Promise.all(
       clean.map(async (code) => {
         const row = await getLatestStockRow(code);
@@ -641,6 +696,7 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
               code,
               floor: "UNKNOWN",
               companyName: code,
+              companyWebsite: null,
               matchPrice: null,
               matchVol: null,
               change: null,
@@ -670,7 +726,7 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
     ),
     getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>()),
     Promise.all(clean.map(code => getAvg20DVolume(code))),
-    Promise.all(clean.map(code => getCompanyName(code)))
+    Promise.all(clean.map(code => getCompanyMeta(code)))
   ]);
 
   return baseRows.map((base, i) => {
@@ -679,7 +735,8 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
 
     return {
       ...merged,
-      companyName: companyNames[i] ?? merged.companyName ?? merged.code,
+      companyName: companyMetaRows[i]?.name ?? merged.companyName ?? merged.code,
+      companyWebsite: companyMetaRows[i]?.website ?? null,
       avg20DVol,
       volumeVsAvg20:
         avg20DVol != null &&

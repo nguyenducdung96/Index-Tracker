@@ -95,6 +95,7 @@ export type StockQuote = {
   code: string;
   floor: "HOSE" | "HNX" | "UPCOM" | string;
   companyName?: string;
+  companyWebsite?: string | null;
   matchPrice: number | null;
   matchVol?: number | null;
   change: number | null;

@@ -91,9 +91,18 @@ export function StockDetailView({
     <section className="stockDetailView">
       <div className="stockDetailNav">
         <button onClick={onBack}>← Watchlist</button>
-        <a href={`https://www.fireant.vn/Home/StockDetail/${symbol}`} target="_blank" rel="noreferrer">
-          FireAnt ↗
-        </a>
+
+        {detail.companyWebsite && (
+          <a
+            className="companyHomepageButton"
+            href={detail.companyWebsite}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Mở trang chủ chính thức của ${detail.companyName ?? detail.code}`}
+          >
+            Trang chủ ↗
+          </a>
+        )}
       </div>
 
       <section className="stockPanel stockHero">
