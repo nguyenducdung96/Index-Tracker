@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { getDashboard, getVNHistory, subscribeDashboard } from "./api";
-import type { Dashboard, VNQuote } from "./types";
+import { getDashboard, subscribeDashboard } from "./api";
+import type { Dashboard } from "./types";
 import { WorldCard } from "./components/WorldCard";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
-import { VietnamChart } from "./components/VietnamChart";
-import { PremiumCard } from "./components/PremiumCard";
 
-const APP_VERSION = "V7.3.1";
+const APP_VERSION = "V7.4.1";
 
 const empty: Dashboard = {
   world: null,
@@ -20,30 +18,14 @@ const empty: Dashboard = {
 
 export default function App() {
   const [dashboard, setDashboard] = useState<Dashboard>(empty);
-  const [selected, setSelected] = useState<VNQuote | null>(null);
-  const [vnHistory, setVnHistory] = useState<any[]>([]);
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    getDashboard()
-      .then((d) => {
-        setDashboard(d);
-        if (d.vietnam.length) {
-          setSelected((current) => current ?? d.vietnam[0]);
-        }
-      })
-      .catch(console.error);
-
-    const unsubscribe = subscribeDashboard((d) => {
-      setDashboard(d);
-      if (d.vietnam.length) {
-        setSelected((current) => current ?? d.vietnam[0]);
-      }
-    });
+    getDashboard().then(setDashboard).catch(console.error);
+    const unsubscribe = subscribeDashboard(setDashboard);
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
-
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
@@ -54,14 +36,6 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!selected) return;
-
-    getVNHistory(selected.brand, selected.product, 24 * 30)
-      .then(setVnHistory)
-      .catch(console.error);
-  }, [selected?.brand, selected?.product]);
-
   return (
     <main className="shell">
       <header className="appHeader">
@@ -69,7 +43,6 @@ export default function App() {
           <h1>Gold Tracker</h1>
           <p>Dashboard cá nhân · PWA · {APP_VERSION}</p>
         </div>
-
         <div className="headerRight">
           <span className="versionBadge">{APP_VERSION}</span>
           <div className={`status ${online ? "ok" : "bad"}`}>
@@ -86,31 +59,18 @@ export default function App() {
         <button disabled>Tin tức</button>
       </nav>
 
-      <TradingViewGoldLive />
+      <TradingViewGoldLive quote={dashboard.world} />
 
       <details className="referenceFeedDetails">
-        <summary>Feed dùng tính premium (Gold-API) — mở để kiểm tra</summary>
+        <summary>Feed tính toán Gold-API — mở để kiểm tra</summary>
         <WorldCard quote={dashboard.world} />
       </details>
 
-      <PremiumCard
-        worldVndPerLuong={dashboard.worldVndPerLuong}
-        usdVnd={dashboard.usdVnd}
-      />
-
-      <VietnamTable
-        rows={dashboard.vietnam}
-        providers={dashboard.providers}
-        worldVndPerLuong={dashboard.worldVndPerLuong}
-        dataQuality={dashboard.dataQuality}
-        onSelect={setSelected}
-      />
-
-      <VietnamChart selected={selected} data={vnHistory} />
+      <VietnamTable rows={dashboard.vietnam} providers={dashboard.providers} />
 
       <footer>
-        {APP_VERSION}: TradingView OANDA:XAUUSD là realtime display. Gold-API chỉ
-        dùng cho tính premium. Không còn XAU history chart nội bộ trên frontend.
+        {APP_VERSION}: desktop dùng TradingView Advanced Chart; mobile ưu tiên
+        TradingView Symbol Overview và fallback về giá + % nếu widget không tải.
       </footer>
     </main>
   );
