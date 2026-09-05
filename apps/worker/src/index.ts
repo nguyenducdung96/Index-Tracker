@@ -10,6 +10,7 @@ import { getUsdVnd } from "./providers/fx.js";
 import { validateVietnamQuotes, vietnamQualityConfig } from "./quality.js";
 import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
 import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
+import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import {
   addWatchlistSymbol,
   createWatchlist,
@@ -284,6 +285,31 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
       return json({
         data: [],
         provider: "vndirect-public",
+        error: error instanceof Error ? error.message : String(error),
+        serverTime: new Date().toISOString()
+      }, 200);
+    }
+  }
+
+  if (url.pathname === "/api/stocks/realtime-diagnostic") {
+    const symbols = cleanSymbols(url.searchParams.get("symbols"));
+    if (!symbols.length) return json({ data: [], error: "symbols is required" }, 400);
+
+    try {
+      const map = await getRealtimeSnapshots(symbols);
+      return json({
+        provider: "vndirect-realtime-snapshot",
+        requested: symbols,
+        received: [...map.keys()],
+        data: [...map.values()],
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      return json({
+        provider: "vndirect-realtime-snapshot",
+        requested: symbols,
+        received: [],
+        data: [],
         error: error instanceof Error ? error.message : String(error),
         serverTime: new Date().toISOString()
       }, 200);

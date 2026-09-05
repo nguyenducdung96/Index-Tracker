@@ -1,3 +1,4 @@
+import { getRealtimeSnapshots, type VndRealtimeStock } from "./vndirectRealtime.js";
 import type {
   StockChartPoint,
   StockDetail,
@@ -409,41 +410,115 @@ function quoteFromRow(code: string, row: any): StockQuote {
   };
 }
 
+
+function validPositive(value: number | null | undefined) {
+  return value != null && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function mergeRealtimeQuote(base: StockQuote, rt?: VndRealtimeStock): StockQuote {
+  if (!rt) return {
+    ...base,
+    realtimeSnapshotAvailable: false
+  };
+
+  const matchPrice = validPositive(rt.matchPrice) ?? validPositive(rt.currentPrice) ?? base.matchPrice;
+  const refPrice = validPositive(rt.basicPrice) ?? base.refPrice;
+  const avgPrice = validPositive(rt.averagePrice) ?? base.avgPrice;
+
+  let change = base.change;
+  let changePercent = base.changePercent;
+  if (matchPrice != null && refPrice != null) {
+    change = matchPrice - refPrice;
+    changePercent = refPrice !== 0 ? (change / refPrice) * 100 : null;
+  }
+
+  const foreignBuyVol = rt.buyForeignQtty ?? base.foreignBuyVol ?? null;
+  const foreignSellVol = rt.sellForeignQtty ?? base.foreignSellVol ?? null;
+
+  // Snapshot exposes foreign quantities, not a documented exact notional.
+  // Estimate value from average/current price and mark it explicitly.
+  const valuePx = avgPrice ?? matchPrice;
+  const foreignBuyVal =
+    foreignBuyVol != null && valuePx != null
+      ? foreignBuyVol * valuePx * 1000
+      : base.foreignBuyVal ?? null;
+  const foreignSellVal =
+    foreignSellVol != null && valuePx != null
+      ? foreignSellVol * valuePx * 1000
+      : base.foreignSellVal ?? null;
+
+  return {
+    ...base,
+    companyName: rt.companyName || base.companyName,
+    matchPrice,
+    matchVol: rt.matchQtty ?? rt.currentQtty ?? base.matchVol ?? null,
+    change,
+    changePercent,
+    accumulatedVol: rt.accumulatedVol ?? base.accumulatedVol,
+    accumulatedVal: rt.accumulatedVal ?? base.accumulatedVal,
+    refPrice,
+    ceilingPrice: validPositive(rt.ceilingPrice) ?? base.ceilingPrice,
+    floorPrice: validPositive(rt.floorPrice) ?? base.floorPrice,
+    highestPrice: validPositive(rt.highestPrice) ?? base.highestPrice,
+    lowestPrice: validPositive(rt.lowestPrice) ?? base.lowestPrice,
+    avgPrice,
+    foreignBuyVol,
+    foreignSellVol,
+    foreignBuyVal,
+    foreignSellVal,
+    foreignValueEstimated:
+      foreignBuyVol != null || foreignSellVol != null
+        ? true
+        : base.foreignValueEstimated,
+    currentRoom: rt.currentRoom ?? null,
+    totalRoom: rt.totalRoom ?? null,
+    realtimeSnapshotAvailable: true,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
-  // Frontend makes one grouped request to our Worker. The Worker fans out in
-  // parallel because the public VNDIRECT v4 query is most reliable per symbol.
-  return Promise.all(
-    symbols.map(async (symbol) => {
-      const code = symbol.trim().toUpperCase();
-      const row = await getLatestStockRow(code);
-      return row
-        ? quoteFromRow(code, row)
-        : {
-            code,
-            floor: "UNKNOWN",
-            companyName: code,
-            matchPrice: null,
-            matchVol: null,
-            change: null,
-            changePercent: null,
-            accumulatedVol: null,
-            accumulatedVal: null,
-            refPrice: null,
-            ceilingPrice: null,
-            floorPrice: null,
-            openPrice: null,
-            highestPrice: null,
-            lowestPrice: null,
-            avgPrice: null,
-            foreignBuyVol: null,
-            foreignSellVol: null,
-            foreignBuyVal: null,
-            foreignSellVal: null,
-            foreignValueEstimated: false,
-            updatedAt: new Date().toISOString()
-          };
-    })
-  );
+  const clean = symbols.map(x => x.trim().toUpperCase());
+
+  const [baseRows, realtime] = await Promise.all([
+    Promise.all(
+      clean.map(async (code) => {
+        const row = await getLatestStockRow(code);
+        return row
+          ? quoteFromRow(code, row)
+          : {
+              code,
+              floor: "UNKNOWN",
+              companyName: code,
+              matchPrice: null,
+              matchVol: null,
+              change: null,
+              changePercent: null,
+              accumulatedVol: null,
+              accumulatedVal: null,
+              refPrice: null,
+              ceilingPrice: null,
+              floorPrice: null,
+              openPrice: null,
+              highestPrice: null,
+              lowestPrice: null,
+              avgPrice: null,
+              foreignBuyVol: null,
+              foreignSellVol: null,
+              foreignBuyVal: null,
+              foreignSellVal: null,
+              foreignValueEstimated: false,
+              currentRoom: null,
+              totalRoom: null,
+              realtimeSnapshotAvailable: false,
+              updatedAt: new Date().toISOString()
+            } satisfies StockQuote;
+      })
+    ),
+    getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>())
+  ]);
+
+  return baseRows.map(row => mergeRealtimeQuote(row, realtime.get(row.code)));
 }
 
 function sma(values: number[], length: number, index: number): number | null {
@@ -561,7 +636,13 @@ export async function getStockChart(
 
 export async function getStockDetail(symbol: string): Promise<StockDetail> {
   const code = symbol.toUpperCase();
-  const [quote] = await getStockQuotes([code]);
+
+  const [[quote], realtime] = await Promise.all([
+    getStockQuotes([code]),
+    getRealtimeSnapshots([code]).catch(() => new Map<string, VndRealtimeStock>())
+  ]);
+
+  const rt = realtime.get(code);
 
   let avg20DVol: number | null = null;
   try {
@@ -581,35 +662,61 @@ export async function getStockDetail(symbol: string): Promise<StockDetail> {
       ? quote.accumulatedVol / avg20DVol
       : null;
 
-  /*
-   * Public HTTP endpoints are used deliberately because they need no broker
-   * account/API key. They do not provide a documented, stable Top-3 order-book
-   * + foreign-room contract for this Cloudflare app. Keep those fields null
-   * instead of inventing values. The frontend already handles them gracefully.
-   */
+  const bid = [
+    { price: rt?.bidPrice01 ?? null, volume: rt?.bidQtty01 ?? null },
+    { price: rt?.bidPrice02 ?? null, volume: rt?.bidQtty02 ?? null },
+    { price: rt?.bidPrice03 ?? null, volume: rt?.bidQtty03 ?? null }
+  ];
+
+  const ask = [
+    { price: rt?.offerPrice01 ?? null, volume: rt?.offerQtty01 ?? null },
+    { price: rt?.offerPrice02 ?? null, volume: rt?.offerQtty02 ?? null },
+    { price: rt?.offerPrice03 ?? null, volume: rt?.offerQtty03 ?? null }
+  ];
+
+  const bidVol = bid.reduce((sum, x) => sum + (x.volume ?? 0), 0);
+  const askVol = ask.reduce((sum, x) => sum + (x.volume ?? 0), 0);
+  const depthTotal = bidVol + askVol;
+
+  const foreignBuyVol = quote.foreignBuyVol ?? null;
+  const foreignSellVol = quote.foreignSellVol ?? null;
+  const foreignBuyVal = quote.foreignBuyVal ?? null;
+  const foreignSellVal = quote.foreignSellVal ?? null;
+  const foreignNetVal =
+    foreignBuyVal != null && foreignSellVal != null
+      ? foreignBuyVal - foreignSellVal
+      : null;
+
+  const foreignParticipationPct =
+    quote.accumulatedVal != null &&
+    quote.accumulatedVal > 0 &&
+    foreignBuyVal != null &&
+    foreignSellVal != null
+      ? ((foreignBuyVal + foreignSellVal) / quote.accumulatedVal) * 100
+      : null;
+
+  const depthAvailable =
+    Boolean(rt) &&
+    (
+      bid.some(x => x.price != null || x.volume != null) ||
+      ask.some(x => x.price != null || x.volume != null)
+    );
+
   return {
     ...quote,
     avg20DVol,
     volumeVsAvg20,
-    bid: [
-      { price: null, volume: null },
-      { price: null, volume: null },
-      { price: null, volume: null }
-    ],
-    ask: [
-      { price: null, volume: null },
-      { price: null, volume: null },
-      { price: null, volume: null }
-    ],
-    bidRatio: null,
-    askRatio: null,
-    foreignBuyVol: null,
-    foreignSellVol: null,
-    foreignBuyVal: null,
-    foreignSellVal: null,
-    foreignNetVal: null,
-    foreignParticipationPct: null,
-    currentRoom: null,
-    realtimeDepthAvailable: false
+    bid,
+    ask,
+    bidRatio: depthTotal > 0 ? (bidVol / depthTotal) * 100 : null,
+    askRatio: depthTotal > 0 ? (askVol / depthTotal) * 100 : null,
+    foreignBuyVol,
+    foreignSellVol,
+    foreignBuyVal,
+    foreignSellVal,
+    foreignNetVal,
+    foreignParticipationPct,
+    currentRoom: rt?.currentRoom ?? quote.currentRoom ?? null,
+    realtimeDepthAvailable: depthAvailable
   };
 }

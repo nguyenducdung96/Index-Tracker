@@ -128,7 +128,7 @@ export function StockDetailView({
             <div><span>Mua/Bán ròng</span><strong className={moveClass(detail.foreignNetVal)}>{fmtB(detail.foreignNetVal)}</strong></div>
             <div><span>Room còn lại</span><strong>{fmt(detail.currentRoom)}</strong></div>
           </div>
-          {!detail.realtimeDepthAvailable && <div className="dataPendingNote">Room ngoại realtime chưa có trong nguồn VNDIRECT public HTTP.</div>}
+          {!detail.realtimeDepthAvailable && <div className="dataPendingNote">Room ngoại lấy từ VNDIRECT realtime snapshot khi feed trả dữ liệu.</div>}
         </section>
       </div>
 
@@ -155,7 +155,7 @@ export function StockDetailView({
 
         {!detail.realtimeDepthAvailable && (
           <div className="dataPendingNote">
-            Nguồn VNDIRECT public HTTP chưa có contract ổn định cho Top-3 bid/ask và foreign-room; app không giả lập số liệu.
+            Top-3 bid/ask lấy từ VNDIRECT realtime snapshot. Ngoài giờ giao dịch feed có thể không trả cập nhật mới.
           </div>
         )}
       </section>

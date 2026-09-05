@@ -155,7 +155,7 @@ export function WatchlistPanel({
 
             <div className="watchForeign">
               <span className="mobileMetricLabel">
-                NN Mua / Bán{q.foreignValueEstimated ? " (ước tính)" : ""}
+                NN Mua / Bán{q.foreignValueEstimated ? " (ước tính GT)" : ""}
               </span>
               <div>
                 <span className="foreignBuy">M {fmtVal(q.foreignBuyVal)}</span>
