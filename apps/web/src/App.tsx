@@ -5,7 +5,7 @@ import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 import { StocksTab } from "./components/stocks/StocksTab";
 
-const APP_VERSION = "V8.4.1";
+const APP_VERSION = "V8.4.2";
 type MainTab = "gold" | "stocks" | "fx" | "commodities" | "news";
 
 const empty: Dashboard = {

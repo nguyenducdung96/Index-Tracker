@@ -124,11 +124,11 @@ export function WatchlistPanel({
               <div className="stockCodeLine">
                 <strong className={moveClass(q.changePercent)}>{q.code}</strong>
                 <a
-                  href={`https://www.fireant.vn/Home/StockDetail/${q.code}`}
+                  href={`https://web.fireant.vn/ma-chung-khoan/${q.code}`}
                   target="_blank"
                   rel="noreferrer"
                   onClick={e => e.stopPropagation()}
-                  title={`Mở ${q.code} trên FireAnt`}
+                  title={`Mở chart ${q.code} trên FireAnt`}
                 >
                   ↗
                 </a>
