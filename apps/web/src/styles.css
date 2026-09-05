@@ -325,3 +325,296 @@ footer {
   .tvChartWidget { height: 470px; }
   .tvNotice { padding: 10px 14px 13px; }
 }
+
+
+/* V7.2 responsive hardening */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 24px));
+  max-width: 100%;
+  min-width: 0;
+}
+
+.shell > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.appHeader {
+  min-width: 0;
+}
+
+.tabs {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tvGoldCard,
+.tvQuoteWidget,
+.tvSymbolInfo,
+.tvChartWidget,
+.tvAdvancedChart,
+.tvMobileChartWidget,
+.tvMiniChart {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tvGoldCard {
+  contain: layout paint;
+}
+
+.tvQuoteWidget {
+  overflow: hidden;
+}
+
+.tvChartWidget {
+  height: clamp(460px, 58vw, 620px);
+  overflow: hidden;
+}
+
+.tvAdvancedChart {
+  height: 100%;
+  overflow: hidden;
+}
+
+.tvMobileChartWidget {
+  width: 100%;
+  height: 330px;
+  min-height: 300px;
+  overflow: hidden;
+  border-top: 1px solid #1e2d43;
+  background: #07101d;
+}
+
+.tvMiniChart {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tvFullChartButton {
+  display: none;
+}
+
+.mobileOnly { display: none; }
+
+.tableWrap {
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: 100%;
+    padding: max(10px, env(safe-area-inset-top)) 10px
+      calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .appHeader {
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 23px;
+    line-height: 1.15;
+  }
+
+  header p {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .status {
+    flex: 0 0 auto;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+
+  .tabs {
+    margin-left: -2px;
+    margin-right: -2px;
+    gap: 6px;
+  }
+
+  .tabs button {
+    padding: 8px 11px;
+    font-size: 12px;
+  }
+
+  .card {
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+
+  .tvGoldCard {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 14px;
+  }
+
+  .tvGoldHeader {
+    padding: 12px 12px 8px;
+    gap: 8px;
+  }
+
+  .tvHeading {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tvTitle {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .tvDescription {
+    font-size: 11px;
+    margin-bottom: 0;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+  }
+
+  .liveBadge,
+  .freeBadge {
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .tvLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .tvQuoteWidget {
+    min-height: 158px;
+    padding: 0 4px;
+  }
+
+  .tvSymbolInfo {
+    min-height: 154px;
+  }
+
+  /* Advanced TradingView iframe is intentionally not rendered on mobile. */
+  .tvChartWidget {
+    display: none;
+  }
+
+  .tvMobileChartWidget {
+    display: block;
+    height: min(350px, 76vh);
+    min-height: 285px;
+  }
+
+  .tvFullChartButton {
+    display: block;
+    margin: 10px 12px 2px;
+    padding: 10px 12px;
+    text-align: center;
+    border: 1px solid #2c405d;
+    border-radius: 10px;
+    background: #0c1829;
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .tvNotice {
+    padding: 9px 12px 12px;
+    gap: 4px 8px;
+    line-height: 1.35;
+  }
+
+  .desktopOnly { display: none; }
+  .mobileOnly { display: inline; }
+
+  .referenceFeedDetails {
+    border-radius: 12px;
+  }
+
+  .referenceFeedDetails > summary {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  .premiumCard {
+    padding: 13px;
+    gap: 8px;
+  }
+
+  .premiumValue {
+    font-size: 25px;
+  }
+
+  /* Vietnam table is intentionally kept as a table; allow native horizontal scroll. */
+  .tableWrap {
+    margin-left: -13px;
+    margin-right: -13px;
+    padding-left: 13px;
+    padding-right: 13px;
+    width: calc(100% + 26px);
+  }
+
+  table {
+    min-width: 900px;
+  }
+
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  .providerChip {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .providerLegend,
+  .qualityBanner {
+    font-size: 10px;
+  }
+
+  .qualityBanner span {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+
+  footer {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 390px) {
+  .shell {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .appHeader {
+    gap: 8px;
+  }
+
+  h1 { font-size: 21px; }
+
+  .tvMobileChartWidget {
+    height: 300px;
+  }
+}
