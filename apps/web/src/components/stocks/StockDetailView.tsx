@@ -98,7 +98,7 @@ export function StockDetailView({
             href={detail.companyWebsite}
             target="_blank"
             rel="noopener noreferrer"
-            title={`Mở trang chủ chính thức của ${detail.companyName ?? detail.code}`}
+            title={`Mở website chính thức của ${detail.companyName ?? detail.code}`}
           >
             Trang chủ ↗
           </a>

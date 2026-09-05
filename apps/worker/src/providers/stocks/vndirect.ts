@@ -10,6 +10,8 @@ const STOCK_PRICES_URL = "https://api-finfo.vndirect.com.vn/v4/stock_prices";
 const MARKET_PRICES_URL = "https://api-finfo.vndirect.com.vn/v4/vnmarket_prices";
 const DCHART_URL = "https://dchart-api.vndirect.com.vn/dchart/history";
 const SECURITIES_URL = "https://api-finfo.vndirect.com.vn/v4/stocks";
+const FIREANT_PROFILE_BASE = "https://restv2.fireant.vn/symbols";
+const VNDIRECT_LEGACY_STOCKS_URL = "https://finfo-api.vndirect.com.vn/stocks";
 
 const HEADERS = {
   accept: "application/json,text/plain,*/*",
@@ -347,11 +349,120 @@ function normalizeOfficialWebsite(value: unknown): string | null {
   }
 }
 
+function findWebsiteDeep(value: any): string | null {
+  if (value == null) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findWebsiteDeep(item);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  if (typeof value !== "object") return null;
+
+  // Prefer explicit website-like keys first.
+  const preferredKeys = [
+    "website",
+    "websiteAddress",
+    "companyWebsite",
+    "webSite",
+    "homepage",
+    "homePage",
+    "web",
+    "url"
+  ];
+
+  for (const key of preferredKeys) {
+    if (key in value) {
+      const normalized = normalizeOfficialWebsite(value[key]);
+      if (normalized) return normalized;
+    }
+  }
+
+  // Then inspect nested objects because profile APIs sometimes wrap company
+  // contact data one level deeper.
+  for (const nested of Object.values(value)) {
+    if (nested && typeof nested === "object") {
+      const found = findWebsiteDeep(nested);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+async function fetchVndirectLegacyMeta(symbol: string): Promise<CompanyMeta> {
+  try {
+    const url = new URL(VNDIRECT_LEGACY_STOCKS_URL);
+    url.searchParams.set("symbol", symbol);
+
+    const payload = await fetchJson(url);
+    const row =
+      (Array.isArray(payload?.data) ? payload.data[0] : null) ??
+      payload?.data ??
+      null;
+
+    if (!row) return { name: null, website: null };
+
+    return {
+      name: s(
+        row?.companyName,
+        row?.companyNameVi,
+        row?.organName,
+        row?.name,
+        row?.shortName,
+        row?.symbol
+      ),
+      website: findWebsiteDeep(row)
+    };
+  } catch {
+    return { name: null, website: null };
+  }
+}
+
+async function fetchFireAntCompanyMeta(symbol: string): Promise<CompanyMeta> {
+  try {
+    const url = `${FIREANT_PROFILE_BASE}/${encodeURIComponent(symbol)}/profile`;
+    const res = await fetch(url, {
+      headers: {
+        accept: "application/json,text/plain,*/*",
+        "user-agent": "Mozilla/5.0 MarketTrackerPWA/8.6.2",
+        referer: "https://web.fireant.vn/"
+      },
+      signal: AbortSignal.timeout(8000),
+      cache: "no-store"
+    });
+
+    if (!res.ok) return { name: null, website: null };
+
+    const payload = await res.json<any>();
+
+    return {
+      name: s(
+        payload?.companyName,
+        payload?.shortName,
+        payload?.name,
+        payload?.internationalName,
+        payload?.symbol
+      ),
+      website: findWebsiteDeep(payload)
+    };
+  } catch {
+    return { name: null, website: null };
+  }
+}
+
 async function getCompanyMeta(code: string): Promise<CompanyMeta> {
   const symbol = code.toUpperCase();
   const cached = companyMetaCache.get(symbol);
   if (cached && Date.now() < cached.expiresAt) return cached.meta;
 
+  let name: string | null = null;
+  let website: string | null = null;
+
+  // 1) Primary source: VNDIRECT v4 stock metadata.
   try {
     const url = new URL(SECURITIES_URL);
     url.searchParams.set("q", `code:${symbol}`);
@@ -361,44 +472,42 @@ async function getCompanyMeta(code: string): Promise<CompanyMeta> {
     const payload = await fetchJson(url);
     const row = dataRows(payload)[0] ?? null;
 
-    const name = row
-      ? s(
-          row?.companyName,
-          row?.companyNameVi,
-          row?.organName,
-          row?.name,
-          row?.shortName
-        )
-      : null;
+    if (row) {
+      name = s(
+        row?.companyName,
+        row?.companyNameVi,
+        row?.organName,
+        row?.name,
+        row?.shortName
+      );
 
-    const website = row
-      ? normalizeOfficialWebsite(
-          row?.website ??
-          row?.websiteAddress ??
-          row?.companyWebsite ??
-          row?.webSite ??
-          row?.url ??
-          row?.homepage ??
-          row?.homePage
-        )
-      : null;
+      website = findWebsiteDeep(row);
+    }
+  } catch {}
 
-    const meta = { name, website };
-
-    companyMetaCache.set(symbol, {
-      meta,
-      expiresAt: Date.now() + 6 * 60 * 60_000
-    });
-
-    return meta;
-  } catch {
-    const meta = { name: null, website: null };
-    companyMetaCache.set(symbol, {
-      meta,
-      expiresAt: Date.now() + 30 * 60_000
-    });
-    return meta;
+  // 2) Secondary VNDIRECT metadata endpoint.
+  if (!website || !name) {
+    const legacy = await fetchVndirectLegacyMeta(symbol);
+    name = name ?? legacy.name;
+    website = website ?? legacy.website;
   }
+
+  // 3) Final fallback: FireAnt company profile ONLY for company homepage
+  // metadata. This does not change any market-price/foreign/chart provider.
+  if (!website) {
+    const fireant = await fetchFireAntCompanyMeta(symbol);
+    name = name ?? fireant.name;
+    website = fireant.website;
+  }
+
+  const meta = { name, website };
+
+  companyMetaCache.set(symbol, {
+    meta,
+    expiresAt: Date.now() + (website ? 12 : 1) * 60 * 60_000
+  });
+
+  return meta;
 }
 
 function quoteFromRow(code: string, row: any): StockQuote {
