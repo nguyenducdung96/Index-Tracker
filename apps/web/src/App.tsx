@@ -5,7 +5,7 @@ import { WorldCard } from "./components/WorldCard";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 
-const APP_VERSION = "V7.4.1";
+const APP_VERSION = "V7.5";
 
 const empty: Dashboard = {
   world: null,
@@ -26,6 +26,7 @@ export default function App() {
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
+
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
@@ -43,11 +44,12 @@ export default function App() {
           <h1>Gold Tracker</h1>
           <p>Dashboard cá nhân · PWA · {APP_VERSION}</p>
         </div>
+
         <div className="headerRight">
           <span className="versionBadge">{APP_VERSION}</span>
-          <div className={`status ${online ? "ok" : "bad"}`}>
+          <span className={`status ${online ? "ok" : "bad"}`}>
             {online ? "● Online" : "● Offline"}
-          </div>
+          </span>
         </div>
       </header>
 
@@ -62,15 +64,15 @@ export default function App() {
       <TradingViewGoldLive quote={dashboard.world} />
 
       <details className="referenceFeedDetails">
-        <summary>Feed tính toán Gold-API — mở để kiểm tra</summary>
+        <summary>Chi tiết nguồn giá tính toán — Gold-API</summary>
         <WorldCard quote={dashboard.world} />
       </details>
 
       <VietnamTable rows={dashboard.vietnam} providers={dashboard.providers} />
 
       <footer>
-        {APP_VERSION}: desktop dùng TradingView Advanced Chart; mobile ưu tiên
-        TradingView Symbol Overview và fallback về giá + % nếu widget không tải.
+        {APP_VERSION} · Desktop dùng TradingView chart. Mobile ưu tiên độ ổn định:
+        giá XAU/USD + % thay đổi và link TradingView/Trading Economics.
       </footer>
     </main>
   );

@@ -19,13 +19,18 @@ export default defineConfig({
         name: "Gold Tracker",
         short_name: "GoldTracker",
         description: "Theo dõi giá vàng thế giới và Việt Nam",
-        theme_color: "#0b1220",
-        background_color: "#0b1220",
+        theme_color: "#06101d",
+        background_color: "#06101d",
         display: "standalone",
         start_url: "/",
         scope: "/",
         icons: [
-          { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+          {
+            src: "/icon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable"
+          }
         ]
       }
     })

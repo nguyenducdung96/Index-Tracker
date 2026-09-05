@@ -7,8 +7,8 @@ function productLabel(product: "bar" | "ring") {
 }
 
 function officialUrl(brand: string, providers: ProviderStatus[]) {
-  const p = providers.find((x) => x.brand === brand);
-  return p?.url ?? p?.homeUrl ?? null;
+  const provider = providers.find((x) => x.brand === brand);
+  return provider?.url ?? provider?.homeUrl ?? null;
 }
 
 export function VietnamTable({
@@ -20,8 +20,12 @@ export function VietnamTable({
 }) {
   return (
     <section className="card vnSimpleCard">
-      <div className="sectionTitle">Giá vàng Việt Nam</div>
-      <div className="unit">VNĐ / lượng</div>
+      <div className="vnSimpleHeader">
+        <div>
+          <div className="sectionTitle">Giá vàng Việt Nam</div>
+          <div className="unit">VNĐ / lượng</div>
+        </div>
+      </div>
 
       <div className="vnDesktopTable">
         <table className="vnCompactTable">
@@ -31,20 +35,24 @@ export function VietnamTable({
               <th>Sản phẩm</th>
               <th>Mua</th>
               <th>Bán</th>
-              <th>Nguồn</th>
+              <th>Link giá</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => {
-              const url = officialUrl(r.brand, providers);
+            {rows.map((row, index) => {
+              const url = officialUrl(row.brand, providers);
               return (
-                <tr key={`${r.brand}-${r.product}-${i}`}>
-                  <td><strong>{r.brand}</strong></td>
-                  <td>{productLabel(r.product)}</td>
-                  <td>{fmt.format(r.buy)}</td>
-                  <td>{fmt.format(r.sell)}</td>
+                <tr key={`${row.brand}-${row.product}-${index}`}>
+                  <td><strong>{row.brand}</strong></td>
+                  <td>{productLabel(row.product)}</td>
+                  <td>{fmt.format(row.buy)}</td>
+                  <td>{fmt.format(row.sell)}</td>
                   <td>
-                    {url ? <a href={url} target="_blank" rel="noreferrer">Giá hãng ↗</a> : "—"}
+                    {url ? (
+                      <a href={url} target="_blank" rel="noreferrer">
+                        Chính thức ↗
+                      </a>
+                    ) : "—"}
                   </td>
                 </tr>
               );
@@ -54,18 +62,27 @@ export function VietnamTable({
       </div>
 
       <div className="vnMobileList">
-        {rows.map((r, i) => {
-          const url = officialUrl(r.brand, providers);
+        {rows.map((row, index) => {
+          const url = officialUrl(row.brand, providers);
           return (
-            <article className="vnMobileItem" key={`${r.brand}-${r.product}-m-${i}`}>
+            <article
+              className="vnMobileItem"
+              key={`${row.brand}-${row.product}-mobile-${index}`}
+            >
               <div className="vnMobileTop">
                 <div>
-                  <div className="vnMobileBrand">{r.brand}</div>
-                  <div className="vnMobileProduct">{productLabel(r.product)}</div>
+                  <div className="vnMobileBrand">{row.brand}</div>
+                  <div className="vnMobileProduct">{productLabel(row.product)}</div>
                 </div>
+
                 {url && (
-                  <a className="vnBrandLink" href={url} target="_blank" rel="noreferrer">
-                    Giá hãng ↗
+                  <a
+                    className="vnBrandLink"
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Chính thức ↗
                   </a>
                 )}
               </div>
@@ -73,11 +90,12 @@ export function VietnamTable({
               <div className="vnMobilePrices">
                 <div className="vnPriceCell">
                   <span>Mua</span>
-                  <strong>{fmt.format(r.buy)}</strong>
+                  <strong>{fmt.format(row.buy)}</strong>
                 </div>
+
                 <div className="vnPriceCell">
                   <span>Bán</span>
-                  <strong>{fmt.format(r.sell)}</strong>
+                  <strong>{fmt.format(row.sell)}</strong>
                 </div>
               </div>
             </article>
@@ -85,7 +103,9 @@ export function VietnamTable({
         })}
       </div>
 
-      {!rows.length && <div className="empty">Chưa có dữ liệu giá vàng Việt Nam.</div>}
+      {!rows.length && (
+        <div className="empty">Chưa có dữ liệu giá vàng Việt Nam.</div>
+      )}
     </section>
   );
 }

@@ -23,7 +23,7 @@ export async function getVNHistory(brand: string, product: string, hours = 168) 
 export function subscribeDashboard(onData: (data: Dashboard) => void) {
   const intervalMs = Math.max(
     5000,
-    Number((import.meta as any).env?.VITE_DASHBOARD_POLL_MS ?? 10000)
+    Number((import.meta as any).env?.VITE_DASHBOARD_POLL_MS ?? 5000)
   );
 
   let stopped = false;
