@@ -1877,3 +1877,73 @@ footer,
     letter-spacing: 0;
   }
 }
+
+
+/* ==========================================================
+   V8.6 — STOCK DETAIL PRECISION + SIGNAL COLORS
+   ========================================================== */
+
+.dayRangeCurrent {
+  margin-top: 5px;
+  text-align: center;
+  color: #6f8eaa;
+  font-size: 8px;
+}
+
+.dayRangeCurrent strong {
+  margin-left: 4px;
+  font-size: 9px;
+}
+
+.detailRatio {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 6px;
+  border-radius: 7px;
+}
+
+.detailRatio.ratioNeutral {
+  color: #8fb5d8;
+  background: rgba(143,181,216,.06);
+}
+
+.detailRatio.ratioWarm {
+  color: #f2c94c;
+  background: rgba(242,201,76,.07);
+}
+
+.detailRatio.ratioStrong {
+  color: #18e58c;
+  background: rgba(24,229,140,.07);
+}
+
+.detailRatio.ratioHot {
+  color: #18e58c;
+  border: 1px solid rgba(24,229,140,.25);
+  background: rgba(24,229,140,.12);
+  font-weight: 900;
+}
+
+/* 5 foreign metrics: keep compact and responsive. */
+.stockDetailColumns .metricGrid {
+  align-items: stretch;
+}
+
+@media (max-width:760px) {
+  .stockHeroPriceBox strong {
+    font-size: 24px;
+  }
+
+  .stockPriceMarkers {
+    gap: 8px;
+    font-size: 9px;
+  }
+
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .dayRangeCurrent {
+    font-size: 7px;
+  }
+}

@@ -8,9 +8,30 @@ function moveClass(v: number | null | undefined) {
   return v > 0 ? "up" : "down";
 }
 
-function fmt(v: number | null | undefined, digits = 0) {
+function ratioClass(v: number | null | undefined) {
+  if (v == null) return "ratioNeutral";
+  if (v >= 2) return "ratioHot";
+  if (v >= 1.2) return "ratioStrong";
+  if (v >= 0.8) return "ratioWarm";
+  return "ratioNeutral";
+}
+
+function fmtPrice(v: number | null | undefined) {
   if (v == null) return "—";
-  return v.toLocaleString("vi-VN", { maximumFractionDigits: digits });
+  return v.toLocaleString("vi-VN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function fmtCount(v: number | null | undefined) {
+  if (v == null) return "—";
+  return Math.round(v).toLocaleString("vi-VN");
+}
+
+function fmtPct(v: number | null | undefined) {
+  if (v == null) return "—";
+  return `${v > 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
 
 function fmtB(v: number | null | undefined) {
@@ -82,29 +103,32 @@ export function StockDetailView({
             <h2>{detail.companyName ?? detail.code}</h2>
           </div>
           <div className="stockHeroPriceBox">
-            <strong className={moveClass(detail.changePercent)}>{fmt(detail.matchPrice)}</strong>
+            <strong className={moveClass(detail.changePercent)}>{fmtPrice(detail.matchPrice)}</strong>
             <span className={moveClass(detail.changePercent)}>
-              {detail.change == null ? "—" : `${detail.change > 0 ? "+" : ""}${fmt(detail.change)}`}
+              {detail.change == null ? "—" : `${detail.change > 0 ? "+" : ""}${fmtPrice(detail.change)}`}
               {" · "}
-              {detail.changePercent == null ? "—" : `${detail.changePercent > 0 ? "+" : ""}${detail.changePercent.toFixed(2)}%`}
+              {fmtPct(detail.changePercent)}
             </span>
           </div>
         </div>
 
         <div className="stockPriceMarkers">
-          <span className="floorColor">Sàn {fmt(detail.floorPrice)}</span>
-          <span className="refColor">TC {fmt(detail.refPrice)}</span>
-          <span className="ceilColor">Trần {fmt(detail.ceilingPrice)}</span>
-          <span>Khớp gần nhất {fmt(detail.matchVol)}</span>
+          <span className="floorColor">Sàn {fmtPrice(detail.floorPrice)}</span>
+          <span className="refColor">TC {fmtPrice(detail.refPrice)}</span>
+          <span className="ceilColor">Trần {fmtPrice(detail.ceilingPrice)}</span>
+          <span>Khớp gần nhất {fmtCount(detail.matchVol)}</span>
         </div>
 
         <div className="dayRange">
           <div className="dayRangeLabels">
-            <span>Thấp {fmt(detail.lowestPrice)}</span>
-            <span>Cao {fmt(detail.highestPrice)}</span>
+            <span>Thấp {fmtPrice(detail.lowestPrice)}</span>
+            <span>Cao {fmtPrice(detail.highestPrice)}</span>
           </div>
           <div className="dayRangeTrack">
             <span className="dayRangeDot" style={{ left: `${dayPct}%` }} />
+          </div>
+          <div className="dayRangeCurrent">
+            Hiện tại <strong className={moveClass(detail.changePercent)}>{fmtPrice(detail.matchPrice)}</strong>
           </div>
         </div>
       </section>
@@ -113,20 +137,26 @@ export function StockDetailView({
         <section className="stockPanel">
           <h3>Dòng tiền & Thanh khoản</h3>
           <div className="metricGrid">
-            <div><span>Giá TB</span><strong>{fmt(detail.avgPrice)}</strong></div>
-            <div><span>Tổng KL</span><strong>{fmt(detail.accumulatedVol)} cp</strong></div>
+            <div><span>Giá TB</span><strong>{fmtPrice(detail.avgPrice)}</strong></div>
+            <div><span>Tổng KL</span><strong>{fmtCount(detail.accumulatedVol)} cp</strong></div>
             <div><span>Tổng GT</span><strong>{fmtB(detail.accumulatedVal)}</strong></div>
-            <div><span>Vol / Avg20D</span><strong>{detail.volumeVsAvg20 == null ? "—" : `${detail.volumeVsAvg20.toFixed(2)}x`}</strong></div>
+            <div>
+              <span>Vol / Avg20D</span>
+              <strong className={`detailRatio ${ratioClass(detail.volumeVsAvg20)}`}>
+                {detail.volumeVsAvg20 == null ? "—" : `${detail.volumeVsAvg20.toFixed(2)}x`}
+              </strong>
+            </div>
           </div>
         </section>
 
         <section className="stockPanel">
           <h3>Khối ngoại</h3>
           <div className="metricGrid">
-            <div><span>Mua</span><strong>{fmt(detail.foreignBuyVol)} cp</strong></div>
-            <div><span>Bán</span><strong>{fmt(detail.foreignSellVol)} cp</strong></div>
+            <div><span>Mua</span><strong>{fmtCount(detail.foreignBuyVol)} cp</strong></div>
+            <div><span>Bán</span><strong>{fmtCount(detail.foreignSellVol)} cp</strong></div>
             <div><span>Mua/Bán ròng</span><strong className={moveClass(detail.foreignNetVal)}>{fmtB(detail.foreignNetVal)}</strong></div>
-            <div><span>Room còn lại</span><strong>{fmt(detail.currentRoom)}</strong></div>
+            <div><span>NN tham gia</span><strong>{detail.foreignParticipationPct == null ? "—" : `${detail.foreignParticipationPct.toFixed(1)}%`}</strong></div>
+            <div><span>Room còn lại</span><strong>{fmtCount(detail.currentRoom)}</strong></div>
           </div>
           {!detail.realtimeDepthAvailable && <div className="dataPendingNote">Room ngoại lấy từ VNDIRECT realtime snapshot khi feed trả dữ liệu.</div>}
         </section>
@@ -145,11 +175,11 @@ export function StockDetailView({
         <div className="orderDepth">
           <div>
             <strong>Dư mua</strong>
-            {detail.bid.map((x,i) => <div key={i}><span>{fmt(x.volume)}</span><b>{fmt(x.price)}</b></div>)}
+            {detail.bid.map((x,i) => <div key={i}><span>{fmtCount(x.volume)}</span><b>{fmtPrice(x.price)}</b></div>)}
           </div>
           <div>
             <strong>Dư bán</strong>
-            {detail.ask.map((x,i) => <div key={i}><b>{fmt(x.price)}</b><span>{fmt(x.volume)}</span></div>)}
+            {detail.ask.map((x,i) => <div key={i}><b>{fmtPrice(x.price)}</b><span>{fmtCount(x.volume)}</span></div>)}
           </div>
         </div>
 

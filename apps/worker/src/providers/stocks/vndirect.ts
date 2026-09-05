@@ -9,6 +9,7 @@ import type {
 const STOCK_PRICES_URL = "https://api-finfo.vndirect.com.vn/v4/stock_prices";
 const MARKET_PRICES_URL = "https://api-finfo.vndirect.com.vn/v4/vnmarket_prices";
 const DCHART_URL = "https://dchart-api.vndirect.com.vn/dchart/history";
+const SECURITIES_URL = "https://api-finfo.vndirect.com.vn/v4/stocks";
 
 const HEADERS = {
   accept: "application/json,text/plain,*/*",
@@ -299,6 +300,52 @@ function foreignValueFromRow(
   return { value: null, estimated: false };
 }
 
+
+type CompanyMetaCacheEntry = {
+  name: string | null;
+  expiresAt: number;
+};
+
+const companyMetaCache = new Map<string, CompanyMetaCacheEntry>();
+
+async function getCompanyName(code: string): Promise<string | null> {
+  const symbol = code.toUpperCase();
+  const cached = companyMetaCache.get(symbol);
+  if (cached && Date.now() < cached.expiresAt) return cached.name;
+
+  try {
+    const url = new URL(SECURITIES_URL);
+    url.searchParams.set("q", `code:${symbol}`);
+    url.searchParams.set("size", "1");
+    url.searchParams.set("page", "1");
+
+    const payload = await fetchJson(url);
+    const row = dataRows(payload)[0] ?? null;
+    const name = row
+      ? s(
+          row?.companyName,
+          row?.companyNameVi,
+          row?.organName,
+          row?.name,
+          row?.shortName
+        )
+      : null;
+
+    companyMetaCache.set(symbol, {
+      name,
+      expiresAt: Date.now() + 6 * 60 * 60_000
+    });
+
+    return name;
+  } catch {
+    companyMetaCache.set(symbol, {
+      name: null,
+      expiresAt: Date.now() + 30 * 60_000
+    });
+    return null;
+  }
+}
+
 function quoteFromRow(code: string, row: any): StockQuote {
   const matchPrice = priceScale(n(
     row?.matchPrice,
@@ -584,7 +631,7 @@ async function getAvg20DVolume(symbol: string): Promise<number | null> {
 export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
   const clean = symbols.map(x => x.trim().toUpperCase());
 
-  const [baseRows, realtime, avg20Rows] = await Promise.all([
+  const [baseRows, realtime, avg20Rows, companyNames] = await Promise.all([
     Promise.all(
       clean.map(async (code) => {
         const row = await getLatestStockRow(code);
@@ -622,7 +669,8 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
       })
     ),
     getRealtimeSnapshots(clean).catch(() => new Map<string, VndRealtimeStock>()),
-    Promise.all(clean.map(code => getAvg20DVolume(code)))
+    Promise.all(clean.map(code => getAvg20DVolume(code))),
+    Promise.all(clean.map(code => getCompanyName(code)))
   ]);
 
   return baseRows.map((base, i) => {
@@ -631,6 +679,7 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
 
     return {
       ...merged,
+      companyName: companyNames[i] ?? merged.companyName ?? merged.code,
       avg20DVol,
       volumeVsAvg20:
         avg20DVol != null &&
