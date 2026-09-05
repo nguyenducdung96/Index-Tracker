@@ -291,6 +291,32 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
     }
   }
 
+  if (url.pathname === "/api/stocks/company-homepage") {
+    const symbol = (url.searchParams.get("symbol") ?? "").trim().toUpperCase();
+    if (!symbol) return json({ error: "symbol is required" }, 400);
+
+    try {
+      const [row] = await getStockQuotes([symbol]);
+
+      return json({
+        code: row?.code ?? symbol,
+        companyName: row?.companyName ?? null,
+        companyWebsite: row?.companyWebsite ?? null,
+        companyWebsiteSource: row?.companyWebsiteSource ?? null,
+        available: Boolean(row?.companyWebsite),
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      return json({
+        code: symbol,
+        companyWebsite: null,
+        available: false,
+        error: error instanceof Error ? error.message : String(error),
+        serverTime: new Date().toISOString()
+      }, 200);
+    }
+  }
+
   if (url.pathname === "/api/stocks/foreign-diagnostic") {
     const symbols = cleanSymbols(url.searchParams.get("symbols"));
     if (!symbols.length) return json({ data: [], error: "symbols is required" }, 400);

@@ -1,4 +1,5 @@
 import { getRealtimeSnapshots, type VndRealtimeStock } from "./vndirectRealtime.js";
+import { getVerifiedCompanyHomepage } from "./companyHomepages.js";
 import type {
   StockChartPoint,
   StockDetail,
@@ -306,6 +307,7 @@ function foreignValueFromRow(
 type CompanyMeta = {
   name: string | null;
   website: string | null;
+  websiteSource: string | null;
 };
 
 type CompanyMetaCacheEntry = {
@@ -404,7 +406,7 @@ async function fetchVndirectLegacyMeta(symbol: string): Promise<CompanyMeta> {
       payload?.data ??
       null;
 
-    if (!row) return { name: null, website: null };
+    if (!row) return { name: null, website: null, websiteSource: null };
 
     return {
       name: s(
@@ -415,10 +417,11 @@ async function fetchVndirectLegacyMeta(symbol: string): Promise<CompanyMeta> {
         row?.shortName,
         row?.symbol
       ),
-      website: findWebsiteDeep(row)
+      website: findWebsiteDeep(row),
+      websiteSource: findWebsiteDeep(row) ? "vndirect-legacy" : null
     };
   } catch {
-    return { name: null, website: null };
+    return { name: null, website: null, websiteSource: null };
   }
 }
 
@@ -435,10 +438,11 @@ async function fetchFireAntCompanyMeta(symbol: string): Promise<CompanyMeta> {
       cache: "no-store"
     });
 
-    if (!res.ok) return { name: null, website: null };
+    if (!res.ok) return { name: null, website: null, websiteSource: null };
 
     const payload = await res.json<any>();
 
+    const website = findWebsiteDeep(payload);
     return {
       name: s(
         payload?.companyName,
@@ -447,10 +451,11 @@ async function fetchFireAntCompanyMeta(symbol: string): Promise<CompanyMeta> {
         payload?.internationalName,
         payload?.symbol
       ),
-      website: findWebsiteDeep(payload)
+      website,
+      websiteSource: website ? "fireant-profile" : null
     };
   } catch {
-    return { name: null, website: null };
+    return { name: null, website: null, websiteSource: null };
   }
 }
 
@@ -461,8 +466,24 @@ async function getCompanyMeta(code: string): Promise<CompanyMeta> {
 
   let name: string | null = null;
   let website: string | null = null;
+  let websiteSource: string | null = null;
 
-  // 1) Primary source: VNDIRECT v4 stock metadata.
+  /*
+   * PRIORITY 1 — verified registry.
+   *
+   * This guarantees known official corporate websites continue to work even
+   * when VNDIRECT/FireAnt change metadata response shapes.
+   */
+  const verified = getVerifiedCompanyHomepage(symbol);
+  if (verified) {
+    website = normalizeOfficialWebsite(verified.url);
+    websiteSource = website ? verified.source : null;
+  }
+
+  /*
+   * PRIORITY 2 — VNDIRECT v4 metadata.
+   * Still fetch it because it is our preferred source for the company name.
+   */
   try {
     const url = new URL(SECURITIES_URL);
     url.searchParams.set("q", `code:${symbol}`);
@@ -481,26 +502,51 @@ async function getCompanyMeta(code: string): Promise<CompanyMeta> {
         row?.shortName
       );
 
-      website = findWebsiteDeep(row);
+      if (!website) {
+        const vndWebsite = findWebsiteDeep(row);
+        if (vndWebsite) {
+          website = vndWebsite;
+          websiteSource = "vndirect-v4";
+        }
+      }
     }
   } catch {}
 
-  // 2) Secondary VNDIRECT metadata endpoint.
+  /*
+   * PRIORITY 3 — VNDIRECT legacy metadata.
+   */
   if (!website || !name) {
     const legacy = await fetchVndirectLegacyMeta(symbol);
     name = name ?? legacy.name;
-    website = website ?? legacy.website;
+
+    if (!website && legacy.website) {
+      website = legacy.website;
+      websiteSource = legacy.websiteSource ?? "vndirect-legacy";
+    }
   }
 
-  // 3) Final fallback: FireAnt company profile ONLY for company homepage
-  // metadata. This does not change any market-price/foreign/chart provider.
+  /*
+   * PRIORITY 4 — FireAnt profile metadata only.
+   *
+   * FireAnt documents FA.Company.WebAddress as a company-information field,
+   * but the public REST profile response may vary. We therefore keep this as a
+   * best-effort fallback, never as the only source for verified symbols.
+   */
   if (!website) {
     const fireant = await fetchFireAntCompanyMeta(symbol);
     name = name ?? fireant.name;
-    website = fireant.website;
+
+    if (fireant.website) {
+      website = fireant.website;
+      websiteSource = fireant.websiteSource ?? "fireant-profile";
+    }
   }
 
-  const meta = { name, website };
+  const meta: CompanyMeta = {
+    name,
+    website,
+    websiteSource
+  };
 
   companyMetaCache.set(symbol, {
     meta,
@@ -806,6 +852,7 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
               floor: "UNKNOWN",
               companyName: code,
               companyWebsite: null,
+              companyWebsiteSource: null,
               matchPrice: null,
               matchVol: null,
               change: null,
@@ -846,6 +893,7 @@ export async function getStockQuotes(symbols: string[]): Promise<StockQuote[]> {
       ...merged,
       companyName: companyMetaRows[i]?.name ?? merged.companyName ?? merged.code,
       companyWebsite: companyMetaRows[i]?.website ?? null,
+      companyWebsiteSource: companyMetaRows[i]?.websiteSource ?? null,
       avg20DVol,
       volumeVsAvg20:
         avg20DVol != null &&

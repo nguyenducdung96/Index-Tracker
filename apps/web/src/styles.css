@@ -1982,3 +1982,36 @@ footer,
     font-size: 9px;
   }
 }
+
+
+/* ==========================================================
+   V8.6.3 — GUARANTEED COMPANY HOMEPAGE BUTTON
+   ========================================================== */
+
+.stockDetailNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.companyHomepageButton {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+@media (max-width:760px) {
+  .stockDetailNav {
+    gap: 6px;
+  }
+
+  .companyHomepageButton {
+    max-width: 52vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

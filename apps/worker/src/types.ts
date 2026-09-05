@@ -60,6 +60,7 @@ export type StockQuote = {
   floor: string;
   companyName?: string;
   companyWebsite?: string | null;
+  companyWebsiteSource?: string | null;
   matchPrice: number | null;
   matchVol?: number | null;
   change: number | null;

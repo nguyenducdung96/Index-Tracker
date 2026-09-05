@@ -95,12 +95,13 @@ export function StockDetailView({
         {detail.companyWebsite && (
           <a
             className="companyHomepageButton"
+            data-source={detail.companyWebsiteSource ?? "unknown"}
             href={detail.companyWebsite}
             target="_blank"
             rel="noopener noreferrer"
             title={`Mở website chính thức của ${detail.companyName ?? detail.code}`}
           >
-            Trang chủ ↗
+            Website công ty ↗
           </a>
         )}
       </div>
