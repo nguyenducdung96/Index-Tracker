@@ -14,9 +14,16 @@ function useMediaQuery(query: string) {
   useEffect(() => {
     const media = window.matchMedia(query);
     const update = () => setMatches(media.matches);
+
     update();
-    media.addEventListener?.("change", update);
-    return () => media.removeEventListener?.("change", update);
+
+    if (media.addEventListener) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+
+    media.addListener(update);
+    return () => media.removeListener(update);
   }, [query]);
 
   return matches;
@@ -24,7 +31,7 @@ function useMediaQuery(query: string) {
 
 function TradingViewWidget({ scriptSrc, config, className = "" }: WidgetProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const configKey = JSON.stringify(config);
+  const serializedConfig = JSON.stringify(config);
 
   useEffect(() => {
     const host = ref.current;
@@ -34,29 +41,26 @@ function TradingViewWidget({ scriptSrc, config, className = "" }: WidgetProps) {
 
     const container = document.createElement("div");
     container.className = "tradingview-widget-container";
-    container.style.width = "100%";
-    container.style.height = "100%";
-    container.style.maxWidth = "100%";
-    container.style.overflow = "hidden";
+    container.style.cssText =
+      "width:100%;height:100%;max-width:100%;min-width:0;overflow:hidden;";
 
     const widget = document.createElement("div");
     widget.className = "tradingview-widget-container__widget";
-    widget.style.width = "100%";
-    widget.style.height = "100%";
-    widget.style.maxWidth = "100%";
-    container.appendChild(widget);
+    widget.style.cssText =
+      "width:100%;height:100%;max-width:100%;min-width:0;overflow:hidden;";
 
     const script = document.createElement("script");
     script.type = "text/javascript";
     script.src = scriptSrc;
     script.async = true;
-    script.textContent = configKey;
-    container.appendChild(script);
+    script.textContent = serializedConfig;
 
+    container.appendChild(widget);
+    container.appendChild(script);
     host.appendChild(container);
 
     return () => host.replaceChildren();
-  }, [scriptSrc, configKey]);
+  }, [scriptSrc, serializedConfig]);
 
   return <div ref={ref} className={className} />;
 }
@@ -67,45 +71,103 @@ export function TradingViewGoldLive() {
     (import.meta as any).env?.VITE_TV_GOLD_SYMBOL ?? "OANDA:XAUUSD"
   );
 
-  const symbolInfoConfig = useMemo(() => ({
-    symbol,
-    width: "100%",
-    locale: "en",
-    colorTheme: "dark",
-    isTransparent: true
-  }), [symbol]);
+  const desktopInfo = useMemo(
+    () => ({
+      symbol,
+      width: "100%",
+      locale: "en",
+      colorTheme: "dark",
+      isTransparent: true
+    }),
+    [symbol]
+  );
 
-  const desktopChartConfig = useMemo(() => ({
-    autosize: true,
-    symbol,
-    interval: "1",
-    timezone: "Asia/Ho_Chi_Minh",
-    theme: "dark",
-    style: "1",
-    locale: "en",
-    backgroundColor: "rgba(7, 16, 29, 1)",
-    gridColor: "rgba(30, 45, 67, 0.45)",
-    hide_top_toolbar: false,
-    hide_legend: false,
-    save_image: false,
-    allow_symbol_change: false,
-    calendar: false,
-    support_host: "https://www.tradingview.com"
-  }), [symbol]);
+  const desktopChart = useMemo(
+    () => ({
+      autosize: true,
+      symbol,
+      interval: "1",
+      timezone: "Asia/Ho_Chi_Minh",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      backgroundColor: "rgba(7,16,29,1)",
+      gridColor: "rgba(30,45,67,.45)",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      save_image: false,
+      allow_symbol_change: false,
+      calendar: false,
+      support_host: "https://www.tradingview.com"
+    }),
+    [symbol]
+  );
 
-  const mobileChartConfig = useMemo(() => ({
-    symbol,
-    width: "100%",
-    height: "100%",
-    locale: "en",
-    dateRange: "1D",
-    colorTheme: "dark",
-    isTransparent: true,
-    autosize: true,
-    largeChartUrl: "https://www.tradingview.com/symbols/XAUUSD/",
-    chartOnly: false,
-    noTimeScale: false
-  }), [symbol]);
+  const mobileChart = useMemo(
+    () => ({
+      symbol,
+      width: "100%",
+      height: "100%",
+      locale: "en",
+      dateRange: "1D",
+      colorTheme: "dark",
+      isTransparent: true,
+      autosize: true,
+      chartOnly: false,
+      noTimeScale: false
+    }),
+    [symbol]
+  );
+
+  if (isMobile) {
+    return (
+      <section className="card tvGoldCard tvGoldMobileCard">
+        <div className="tvGoldHeader mobileGoldHeader">
+          <div className="tvHeading">
+            <div className="eyebrowRow">
+              <div className="eyebrow">GOLD · XAU/USD</div>
+              <span className="liveBadge live">● LIVE</span>
+              <span className="freeBadge">FREE</span>
+            </div>
+
+            <div className="sectionTitle tvTitle">Gold realtime · OANDA</div>
+            <div className="unit tvMobileDescription">
+              TradingView responsive chart
+            </div>
+          </div>
+        </div>
+
+        <div className="tvMobileOnlyWidget">
+          <TradingViewWidget
+            scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+            config={mobileChart}
+            className="tvMiniOnly"
+          />
+        </div>
+
+        <div className="tvMobileLinks">
+          <a
+            href="https://www.tradingview.com/symbols/XAUUSD/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Mở TradingView ↗
+          </a>
+          <a
+            href="https://tradingeconomics.com/commodity/gold"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Mở Trading Economics ↗
+          </a>
+        </div>
+
+        <div className="tvNotice mobileTvNotice">
+          <strong>Realtime:</strong> TradingView · {symbol}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="card tvGoldCard">
@@ -116,17 +178,24 @@ export function TradingViewGoldLive() {
             <span className="liveBadge live">● LIVE</span>
             <span className="freeBadge">FREE</span>
           </div>
+
           <div className="sectionTitle tvTitle">TradingView realtime · OANDA</div>
-          <div className="unit tvDescription">
-            Giá và chart được TradingView render trực tiếp.
-          </div>
+          <div className="unit">Giá và chart được TradingView render trực tiếp.</div>
         </div>
 
         <div className="tvLinks">
-          <a href="https://www.tradingview.com/symbols/XAUUSD/" target="_blank" rel="noreferrer">
+          <a
+            href="https://www.tradingview.com/symbols/XAUUSD/"
+            target="_blank"
+            rel="noreferrer"
+          >
             TradingView ↗
           </a>
-          <a href="https://tradingeconomics.com/commodity/gold" target="_blank" rel="noreferrer">
+          <a
+            href="https://tradingeconomics.com/commodity/gold"
+            target="_blank"
+            rel="noreferrer"
+          >
             Trading Economics ↗
           </a>
         </div>
@@ -135,43 +204,21 @@ export function TradingViewGoldLive() {
       <div className="tvQuoteWidget">
         <TradingViewWidget
           scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js"
-          config={symbolInfoConfig}
+          config={desktopInfo}
           className="tvSymbolInfo"
         />
       </div>
 
-      {isMobile ? (
-        <>
-          <div className="tvMobileChartWidget">
-            <TradingViewWidget
-              scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-              config={mobileChartConfig}
-              className="tvMiniChart"
-            />
-          </div>
-          <a
-            className="tvFullChartButton"
-            href="https://www.tradingview.com/chart/?symbol=OANDA%3AXAUUSD"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Mở chart TradingView đầy đủ ↗
-          </a>
-        </>
-      ) : (
-        <div className="tvChartWidget">
-          <TradingViewWidget
-            scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
-            config={desktopChartConfig}
-            className="tvAdvancedChart"
-          />
-        </div>
-      )}
+      <div className="tvChartWidget">
+        <TradingViewWidget
+          scriptSrc="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js"
+          config={desktopChart}
+          className="tvAdvancedChart"
+        />
+      </div>
 
       <div className="tvNotice">
         <strong>Nguồn realtime:</strong> TradingView · {symbol}
-        <span className="desktopOnly">Desktop: Advanced Chart.</span>
-        <span className="mobileOnly">Mobile: chart responsive tối ưu màn hình hẹp.</span>
       </div>
     </section>
   );

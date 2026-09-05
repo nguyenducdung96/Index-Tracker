@@ -7,6 +7,8 @@ import { VietnamTable } from "./components/VietnamTable";
 import { VietnamChart } from "./components/VietnamChart";
 import { PremiumCard } from "./components/PremiumCard";
 
+const APP_VERSION = "V7.3.1";
+
 const empty: Dashboard = {
   world: null,
   vietnam: [],
@@ -23,20 +25,25 @@ export default function App() {
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    getDashboard().then(d => {
-      setDashboard(d);
-      if (d.vietnam.length) setSelected(current => current ?? d.vietnam[0]);
-    }).catch(console.error);
+    getDashboard()
+      .then((d) => {
+        setDashboard(d);
+        if (d.vietnam.length) {
+          setSelected((current) => current ?? d.vietnam[0]);
+        }
+      })
+      .catch(console.error);
 
     const unsubscribe = subscribeDashboard((d) => {
       setDashboard(d);
       if (d.vietnam.length) {
-        setSelected(current => current ?? d.vietnam[0]);
+        setSelected((current) => current ?? d.vietnam[0]);
       }
     });
 
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
+
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
 
@@ -49,6 +56,7 @@ export default function App() {
 
   useEffect(() => {
     if (!selected) return;
+
     getVNHistory(selected.brand, selected.product, 24 * 30)
       .then(setVnHistory)
       .catch(console.error);
@@ -59,10 +67,14 @@ export default function App() {
       <header className="appHeader">
         <div>
           <h1>Gold Tracker</h1>
-          <p>Dashboard cá nhân · PWA · V7.2 Responsive</p>
+          <p>Dashboard cá nhân · PWA · {APP_VERSION}</p>
         </div>
-        <div className={`status ${online ? "ok" : "bad"}`}>
-          {online ? "● Online" : "● Offline"}
+
+        <div className="headerRight">
+          <span className="versionBadge">{APP_VERSION}</span>
+          <div className={`status ${online ? "ok" : "bad"}`}>
+            {online ? "● Online" : "● Offline"}
+          </div>
         </div>
       </header>
 
@@ -97,8 +109,8 @@ export default function App() {
       <VietnamChart selected={selected} data={vnHistory} />
 
       <footer>
-        V7.2: một Cloudflare Worker serve PWA + API + D1. TradingView OANDA:XAUUSD
-        là nguồn realtime hiển thị; Gold-API chỉ dùng cho tính toán premium.
+        {APP_VERSION}: TradingView OANDA:XAUUSD là realtime display. Gold-API chỉ
+        dùng cho tính premium. Không còn XAU history chart nội bộ trên frontend.
       </footer>
     </main>
   );

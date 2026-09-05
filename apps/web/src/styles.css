@@ -618,3 +618,315 @@ body {
     height: 300px;
   }
 }
+
+/* V7.3 FINAL RESPONSIVE OVERRIDES */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  min-width: 0;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 24px));
+  max-width: 1180px;
+  min-width: 0;
+  margin-inline: auto;
+  overflow-x: clip;
+}
+
+.shell > * {
+  max-width: 100%;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.versionBadge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #365072;
+  border-radius: 999px;
+  padding: 6px 8px;
+  color: #93c5fd;
+  background: #0d1828;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.tvGoldCard,
+.tvGoldCard *,
+.tvQuoteWidget,
+.tvSymbolInfo,
+.tvChartWidget,
+.tvAdvancedChart,
+.tvMobileOnlyWidget,
+.tvMiniOnly {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.tvGoldCard {
+  width: 100%;
+  overflow: hidden;
+}
+
+.tvChartWidget {
+  width: 100%;
+  height: clamp(470px, 58vw, 640px);
+  overflow: hidden;
+}
+
+.tvAdvancedChart {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tvMobileOnlyWidget {
+  display: none;
+}
+
+.tableWrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root {
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .shell {
+    width: 100%;
+    max-width: 100vw;
+    margin: 0;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      8px
+      calc(22px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  .appHeader {
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .appHeader h1 {
+    font-size: 22px;
+    line-height: 1.12;
+  }
+
+  .appHeader p {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .headerRight {
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .versionBadge {
+    padding: 5px 6px;
+    font-size: 8px;
+  }
+
+  .status {
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+
+  .tabs {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs button {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px;
+    margin-bottom: 9px;
+  }
+
+  .tvGoldMobileCard {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .mobileGoldHeader {
+    padding: 11px 11px 7px;
+  }
+
+  .tvTitle {
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .tvMobileDescription {
+    font-size: 10px;
+  }
+
+  .eyebrow {
+    font-size: 9px;
+  }
+
+  .liveBadge,
+  .freeBadge {
+    font-size: 8px;
+    padding: 3px 5px;
+  }
+
+  /* Never load/show desktop TradingView widgets on a phone. */
+  .tvQuoteWidget,
+  .tvChartWidget,
+  .tvLinks {
+    display: none !important;
+  }
+
+  /* One single responsive chart for mobile. */
+  .tvMobileOnlyWidget {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 310px;
+    min-height: 270px;
+    overflow: hidden;
+    border-top: 1px solid #1e2d43;
+  }
+
+  .tvMiniOnly,
+  .tvMiniOnly > div,
+  .tvMiniOnly iframe {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    border: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .mobileTvNotice {
+    padding: 8px 11px 10px;
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  .referenceFeedDetails {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .referenceFeedDetails > summary {
+    padding: 9px 10px;
+    font-size: 10px;
+  }
+
+  /* Vietnam gold is kept functionally unchanged.
+     The table scrolls inside its own area instead of making the page wider. */
+  .tableWrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 0;
+    padding-bottom: 5px;
+  }
+
+  table {
+    width: max-content;
+    min-width: 900px;
+    max-width: none;
+  }
+
+  th,
+  td {
+    font-size: 11px;
+    padding: 9px 7px;
+  }
+
+  footer {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 390px) {
+  .shell {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .tvMobileOnlyWidget {
+    height: 285px;
+  }
+}
+
+
+/* V7.3.1 mobile reference links */
+.tvMobileLinks {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .tvMobileLinks {
+    display: flex !important;
+    width: 100%;
+    max-width: 100%;
+    gap: 8px;
+    padding: 9px 11px 2px;
+    overflow: hidden;
+  }
+
+  .tvMobileLinks a {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    padding: 9px 7px;
+    border: 1px solid #2c405d;
+    border-radius: 9px;
+    background: #0c1829;
+    color: #93c5fd;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: normal;
+  }
+}
