@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS world_gold_history (
   price REAL NOT NULL,
   source TEXT NOT NULL
 );
+
 CREATE INDEX IF NOT EXISTS idx_world_gold_ts
 ON world_gold_history(ts);
 
@@ -25,9 +26,9 @@ CREATE TABLE IF NOT EXISTS vn_gold_latest (
   verification_state TEXT,
   verification_sources TEXT,
   quality_state TEXT,
-  quality_reason TEXT, -- JSON array of qualityReasons
-  deviation_pct REAL, -- peerDeviationPct
-  consensus_price REAL, -- peerMedianSell
+  quality_reason TEXT,
+  deviation_pct REAL,
+  consensus_price REAL,
   observed_at TEXT NOT NULL,
   updated_at INTEGER NOT NULL,
   PRIMARY KEY (brand, product)
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS vn_gold_history (
   source_kind TEXT,
   verification_state TEXT
 );
+
 CREATE INDEX IF NOT EXISTS idx_vn_gold_history_lookup
 ON vn_gold_history(brand, product, ts);
 
