@@ -37,3 +37,79 @@ export type VietnamGoldQuote = {
   peerMedianSell?: number | null;
   peerDeviationPct?: number | null;
 };
+
+
+export type StockIndexQuote = {
+  code: "VNINDEX" | "HNXINDEX" | "UPCOMINDEX" | "VN30";
+  name: string;
+  indexValue: number | null;
+  change: number | null;
+  changePercent: number | null;
+  accumulatedVal: number | null;
+  accumulatedVol?: number | null;
+  advances: number | null;
+  declines: number | null;
+  noChanges: number | null;
+  ceilings?: number | null;
+  floors?: number | null;
+  updatedAt: string;
+};
+
+export type StockQuote = {
+  code: string;
+  floor: string;
+  companyName?: string;
+  matchPrice: number | null;
+  matchVol?: number | null;
+  change: number | null;
+  changePercent: number | null;
+  accumulatedVol: number | null;
+  accumulatedVal: number | null;
+  refPrice?: number | null;
+  ceilingPrice?: number | null;
+  floorPrice?: number | null;
+  openPrice?: number | null;
+  highestPrice?: number | null;
+  lowestPrice?: number | null;
+  avgPrice?: number | null;
+  updatedAt: string;
+};
+
+export type StockDepthLevel = { price: number | null; volume: number | null };
+
+export type StockDetail = StockQuote & {
+  avg20DVol?: number | null;
+  volumeVsAvg20?: number | null;
+  bid: StockDepthLevel[];
+  ask: StockDepthLevel[];
+  bidRatio?: number | null;
+  askRatio?: number | null;
+  foreignBuyVol?: number | null;
+  foreignSellVol?: number | null;
+  foreignBuyVal?: number | null;
+  foreignSellVal?: number | null;
+  foreignNetVal?: number | null;
+  foreignParticipationPct?: number | null;
+  currentRoom?: number | null;
+  realtimeDepthAvailable?: boolean;
+};
+
+export type StockChartPoint = {
+  time: string | number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+  ma20?: number | null;
+  ma50?: number | null;
+  ma200?: number | null;
+};
+
+export type Watchlist = {
+  id: number;
+  name: string;
+  symbols: string[];
+  createdAt?: number;
+  updatedAt?: number;
+};

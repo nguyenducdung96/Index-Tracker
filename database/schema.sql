@@ -68,3 +68,22 @@ CREATE TABLE IF NOT EXISTS cron_log (
   last_ok_at INTEGER,
   last_error TEXT
 );
+
+
+CREATE TABLE IF NOT EXISTS stock_watchlists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS stock_watchlist_symbols (
+  watchlist_id INTEGER NOT NULL,
+  symbol TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (watchlist_id, symbol),
+  FOREIGN KEY (watchlist_id) REFERENCES stock_watchlists(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_watchlist_symbols
+ON stock_watchlist_symbols(watchlist_id, sort_order);

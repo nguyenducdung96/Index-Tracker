@@ -193,3 +193,111 @@ export async function cleanup(db: D1Database) {
     db.prepare("DELETE FROM vn_gold_history WHERE ts < ?").bind(vnBefore)
   ]);
 }
+
+
+export async function listWatchlists(db: D1Database) {
+  const lists = await db.prepare(`
+    SELECT id,name,created_at,updated_at
+    FROM stock_watchlists
+    ORDER BY id
+  `).all<any>();
+
+  const symbols = await db.prepare(`
+    SELECT watchlist_id,symbol,sort_order
+    FROM stock_watchlist_symbols
+    ORDER BY watchlist_id,sort_order,symbol
+  `).all<any>();
+
+  const byId = new Map<number, string[]>();
+  for (const row of symbols.results ?? []) {
+    const id = Number(row.watchlist_id);
+    const arr = byId.get(id) ?? [];
+    arr.push(String(row.symbol));
+    byId.set(id, arr);
+  }
+
+  return (lists.results ?? []).map((row:any) => ({
+    id: Number(row.id),
+    name: String(row.name),
+    symbols: byId.get(Number(row.id)) ?? [],
+    createdAt: Number(row.created_at),
+    updatedAt: Number(row.updated_at)
+  }));
+}
+
+export async function ensureDefaultWatchlists(db: D1Database) {
+  const row = await db.prepare("SELECT COUNT(*) AS c FROM stock_watchlists")
+    .first<{c:number}>();
+  if (Number(row?.c ?? 0) > 0) return;
+
+  const now = Date.now();
+  const inserted = await db.prepare(`
+    INSERT INTO stock_watchlists(name,created_at,updated_at)
+    VALUES('Thép',?,?)
+    RETURNING id
+  `).bind(now, now).first<{id:number}>();
+
+  const id = Number(inserted?.id);
+  if (!id) return;
+
+  const defaults = ["HPG","NKG","HSG","VGS"];
+  await db.batch(defaults.map((symbol, i) =>
+    db.prepare(`
+      INSERT OR IGNORE INTO stock_watchlist_symbols(watchlist_id,symbol,sort_order)
+      VALUES(?,?,?)
+    `).bind(id, symbol, i)
+  ));
+}
+
+export async function createWatchlist(db: D1Database, name: string) {
+  const now = Date.now();
+  const row = await db.prepare(`
+    INSERT INTO stock_watchlists(name,created_at,updated_at)
+    VALUES(?,?,?)
+    RETURNING id,name,created_at,updated_at
+  `).bind(name, now, now).first<any>();
+
+  return {
+    id: Number(row?.id),
+    name: String(row?.name),
+    symbols: [],
+    createdAt: Number(row?.created_at),
+    updatedAt: Number(row?.updated_at)
+  };
+}
+
+export async function deleteWatchlist(db: D1Database, id: number) {
+  await db.batch([
+    db.prepare("DELETE FROM stock_watchlist_symbols WHERE watchlist_id=?").bind(id),
+    db.prepare("DELETE FROM stock_watchlists WHERE id=?").bind(id)
+  ]);
+}
+
+export async function addWatchlistSymbol(db: D1Database, id: number, symbol: string) {
+  const now = Date.now();
+  const max = await db.prepare(`
+    SELECT COALESCE(MAX(sort_order),-1) AS m
+    FROM stock_watchlist_symbols
+    WHERE watchlist_id=?
+  `).bind(id).first<{m:number}>();
+
+  await db.batch([
+    db.prepare(`
+      INSERT OR IGNORE INTO stock_watchlist_symbols(watchlist_id,symbol,sort_order)
+      VALUES(?,?,?)
+    `).bind(id, symbol.toUpperCase(), Number(max?.m ?? -1) + 1),
+    db.prepare("UPDATE stock_watchlists SET updated_at=? WHERE id=?")
+      .bind(now, id)
+  ]);
+}
+
+export async function removeWatchlistSymbol(db: D1Database, id: number, symbol: string) {
+  await db.batch([
+    db.prepare(`
+      DELETE FROM stock_watchlist_symbols
+      WHERE watchlist_id=? AND symbol=?
+    `).bind(id, symbol.toUpperCase()),
+    db.prepare("UPDATE stock_watchlists SET updated_at=? WHERE id=?")
+      .bind(Date.now(), id)
+  ]);
+}

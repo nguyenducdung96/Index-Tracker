@@ -9,7 +9,14 @@ import {
 import { getUsdVnd } from "./providers/fx.js";
 import { validateVietnamQuotes, vietnamQualityConfig } from "./quality.js";
 import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
+import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
 import {
+  addWatchlistSymbol,
+  createWatchlist,
+  deleteWatchlist,
+  ensureDefaultWatchlists,
+  listWatchlists,
+  removeWatchlistSymbol,
   cleanup,
   getFx,
   getLatestVietnam,
@@ -212,9 +219,141 @@ async function dashboard(env: Env, ctx: ExecutionContext) {
   };
 }
 
+
+function cleanSymbols(value: string | null) {
+  return [...new Set(
+    String(value ?? "")
+      .split(",")
+      .map(x => x.trim().toUpperCase())
+      .filter(x => /^[A-Z0-9]{2,12}$/.test(x))
+  )].slice(0, 50);
+}
+
+
 async function route(request: Request, env: Env, ctx: ExecutionContext) {
   const url = new URL(request.url);
+  if (url.pathname === "/api/stocks/watchlists" && request.method === "POST") {
+    const body = await request.json<any>().catch(() => ({}));
+    const name = String(body?.name ?? "").trim().slice(0, 40);
+    if (!name) return json({ error: "name is required" }, 400);
+    try {
+      return json({ data: await createWatchlist(env.DB, name) });
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    }
+  }
+
+  const watchlistMatch = url.pathname.match(/^\/api\/stocks\/watchlists\/(\d+)(?:\/symbols)?$/);
+  if (watchlistMatch && request.method !== "GET") {
+    const id = Number(watchlistMatch[1]);
+
+    if (request.method === "DELETE" && !url.pathname.endsWith("/symbols")) {
+      await deleteWatchlist(env.DB, id);
+      return json({ ok: true });
+    }
+
+    if (url.pathname.endsWith("/symbols")) {
+      const body = await request.json<any>().catch(() => ({}));
+      const symbol = String(body?.symbol ?? "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{2,12}$/.test(symbol)) return json({ error: "invalid symbol" }, 400);
+
+      if (request.method === "POST") {
+        await addWatchlistSymbol(env.DB, id, symbol);
+        return json({ ok: true });
+      }
+
+      if (request.method === "DELETE") {
+        await removeWatchlistSymbol(env.DB, id, symbol);
+        return json({ ok: true });
+      }
+    }
+
+    return json({ error: "Method not allowed" }, 405);
+  }
+
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  if (url.pathname === "/api/stocks/indices") {
+    try {
+      return json({
+        data: await getMarketIndexes(),
+        provider: "vndirect-public",
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      return json({
+        data: [],
+        provider: "vndirect-public",
+        error: error instanceof Error ? error.message : String(error),
+        serverTime: new Date().toISOString()
+      }, 200);
+    }
+  }
+
+  if (url.pathname === "/api/stocks/quotes") {
+    const symbols = cleanSymbols(url.searchParams.get("symbols"));
+    if (!symbols.length) return json({ data: [], error: "symbols is required" }, 400);
+    try {
+      return json({
+        data: await getStockQuotes(symbols),
+        provider: "vndirect-public",
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      return json({
+        data: [],
+        provider: "vndirect-public",
+        error: error instanceof Error ? error.message : String(error),
+        serverTime: new Date().toISOString()
+      }, 200);
+    }
+  }
+
+  if (url.pathname.startsWith("/api/stocks/detail/")) {
+    const symbol = url.pathname.split("/").pop()!.toUpperCase();
+    try {
+      return json({
+        data: await getStockDetail(symbol),
+        provider: "vndirect-public",
+        serverTime: new Date().toISOString()
+      });
+    } catch (error) {
+      return json({
+        data: null,
+        provider: "vndirect-public",
+        error: error instanceof Error ? error.message : String(error),
+        serverTime: new Date().toISOString()
+      }, 200);
+    }
+  }
+
+  if (url.pathname.startsWith("/api/stocks/chart/")) {
+    const symbol = url.pathname.split("/").pop()!.toUpperCase();
+    const frameRaw = String(url.searchParams.get("frame") ?? "D").toUpperCase();
+    const frame = (["1","5","15","D"].includes(frameRaw) ? frameRaw : "D") as "1"|"5"|"15"|"D";
+    try {
+      return json({
+        symbol,
+        frame,
+        data: await getStockChart(symbol, frame),
+        provider: "vndirect-public"
+      });
+    } catch (error) {
+      return json({
+        symbol,
+        frame,
+        data: [],
+        provider: "vndirect-public",
+        error: error instanceof Error ? error.message : String(error)
+      }, 200);
+    }
+  }
+
+  if (url.pathname === "/api/stocks/watchlists") {
+    await ensureDefaultWatchlists(env.DB);
+    return json({ data: await listWatchlists(env.DB) });
+  }
+
 
   try {
     if (url.pathname === "/health") {

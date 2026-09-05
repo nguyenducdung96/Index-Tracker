@@ -1182,3 +1182,371 @@ footer,
     padding: 9px 10px 10px;
   }
 }
+
+
+/* ==========================================================
+   V8.0 — STOCKS TAB
+   ========================================================== */
+.stocksTab {
+  display: grid;
+  gap: 12px;
+}
+
+.marketSticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 4px 0;
+  background: rgba(6,16,29,.92);
+  backdrop-filter: blur(10px);
+}
+
+.marketTicker {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: none;
+}
+.marketTicker::-webkit-scrollbar { display: none; }
+
+.indexTickerCard {
+  flex: 1 0 220px;
+  min-width: 220px;
+  padding: 10px 11px;
+  border: 1px solid #223a55;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(62,132,255,.07), transparent 45%),
+    #0a1726;
+  color: inherit;
+  text-decoration: none !important;
+}
+
+.indexTickerTop,
+.indexMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.indexTickerTop strong { font-size: 12px; }
+.indexTickerTop > span { font-size: 17px; font-weight: 900; }
+.indexMove { margin-top: 3px; font-size: 11px; font-weight: 850; }
+.indexMeta {
+  margin-top: 7px;
+  color: #7896b3;
+  font-size: 9px;
+}
+.breadthUp { color: #18e58c; }
+.breadthDown { color: #ff5367; }
+.breadthRef { color: #f2c94c; }
+
+.stockProviderNotice {
+  padding: 10px 12px;
+  border: 1px solid rgba(242,201,76,.35);
+  border-radius: 10px;
+  background: rgba(242,201,76,.055);
+  color: #e7ca66;
+  font-size: 10px;
+}
+
+.stockPanel {
+  padding: 13px;
+  border: 1px solid #20354d;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, #0a1726 0%, #081522 100%);
+}
+
+.watchlistToolbar,
+.panelTitleRow,
+.stockDetailNav,
+.stockHeroTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.watchlistTabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.watchlistTabs::-webkit-scrollbar { display:none; }
+.watchlistTabs button,
+.watchlistActions button,
+.watchlistActions select,
+.chartFrames button,
+.stockDetailNav button {
+  border: 1px solid #29435f;
+  border-radius: 8px;
+  background: #0b1a2b;
+  color: #8fb5d8;
+  padding: 7px 9px;
+  font-size: 10px;
+}
+.watchlistTabs button.active,
+.chartFrames button.active {
+  color: #fff;
+  border-color: #e0b429;
+  background: #1b2b42;
+}
+.watchlistAdd { color: #8fc4ff !important; }
+.dangerGhost { color: #ff7282 !important; }
+
+.watchlistActions {
+  display: flex;
+  gap: 6px;
+}
+
+.addSymbolBar {
+  display: flex;
+  gap: 7px;
+  margin: 10px 0;
+}
+.addSymbolBar input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #263f5c;
+  border-radius: 9px;
+  background: #07131f;
+  color: #f8fafc;
+  padding: 9px 10px;
+}
+.addSymbolBar button {
+  border: 1px solid #2e5d88;
+  border-radius: 9px;
+  background: #0d2740;
+  color: #8fcfff;
+  padding: 8px 12px;
+}
+
+.stockGridRow {
+  display: grid;
+  grid-template-columns: minmax(120px,1fr) minmax(160px,1fr) minmax(150px,1fr) 34px;
+  gap: 10px;
+  align-items: center;
+}
+.watchlistHeader {
+  padding: 8px 9px;
+  color: #6986a3;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+.watchlistRow {
+  padding: 10px 9px;
+  border-top: 1px solid #183048;
+  cursor: pointer;
+  transition: background .14s ease;
+}
+.watchlistRow:hover { background: rgba(76,148,255,.035); }
+.watchlistRow small { display:block; margin-top:2px; color:#6584a3; font-size:9px; }
+.stockCodeLine { display:flex; align-items:center; gap:7px; }
+.stockCodeLine strong { font-size:14px; color:#f1d46b; }
+.stockCodeLine a { color:#6fbfff; }
+.stockMoveBadge {
+  width: fit-content;
+  margin-top: 3px;
+  padding: 3px 6px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 800;
+}
+.stockMoveBadge.up { background: rgba(24,229,140,.07); }
+.stockMoveBadge.down { background: rgba(255,83,103,.07); }
+.stockMoveBadge.ref { background: rgba(242,201,76,.06); }
+
+.up { color:#18e58c !important; }
+.down { color:#ff5367 !important; }
+.ref { color:#f2c94c !important; }
+.floorColor { color:#27d8e8; }
+.ceilColor { color:#c26bff; }
+.refColor { color:#f2c94c; }
+
+.removeSymbol {
+  border: 0;
+  background: transparent;
+  color: #597894;
+  font-size: 18px;
+  cursor: pointer;
+}
+.removeSymbol:hover { color:#ff6678; }
+
+.stockDetailView {
+  display: grid;
+  gap: 10px;
+}
+.stockDetailNav a { color:#71c0ff; font-size:10px; }
+.stockHero h2 { margin:4px 0 0; font-size:18px; }
+.stockHeroCode { color:#f2c94c; font-size:11px; font-weight:900; }
+.stockHeroPriceBox { text-align:right; }
+.stockHeroPriceBox strong { display:block; font-size:30px; }
+.stockHeroPriceBox span { font-size:12px; font-weight:850; }
+.stockPriceMarkers {
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  font-size:10px;
+  font-weight:800;
+}
+.dayRange { margin-top:12px; }
+.dayRangeLabels {
+  display:flex;
+  justify-content:space-between;
+  color:#7694b1;
+  font-size:9px;
+}
+.dayRangeTrack {
+  position:relative;
+  height:7px;
+  margin-top:7px;
+  border-radius:99px;
+  background:linear-gradient(90deg,#27d8e8 0%,#f2c94c 50%,#c26bff 100%);
+}
+.dayRangeDot {
+  position:absolute;
+  top:50%;
+  width:13px;
+  height:13px;
+  transform:translate(-50%,-50%);
+  border:2px solid #fff;
+  border-radius:50%;
+  background:#0b1726;
+}
+
+.stockDetailColumns {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.stockPanel h3 { margin:0 0 10px; font-size:13px; }
+.metricGrid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+.metricGrid > div {
+  padding:8px 9px;
+  border:1px solid #193149;
+  border-radius:9px;
+  background:#071522;
+}
+.metricGrid span {
+  display:block;
+  color:#6584a3;
+  font-size:8px;
+  text-transform:uppercase;
+}
+.metricGrid strong {
+  display:block;
+  margin-top:3px;
+  font-size:11px;
+}
+
+.supplyDemand {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:9px;
+}
+.supplyDemand > div {
+  width:100px;
+  height:5px;
+  border-radius:99px;
+  overflow:hidden;
+  background:#4b1d2a;
+}
+.supplyDemand i {
+  display:block;
+  height:100%;
+  background:#167a56;
+}
+
+.orderDepth {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.orderDepth > div {
+  padding:9px;
+  border:1px solid #193149;
+  border-radius:9px;
+}
+.orderDepth strong { display:block; margin-bottom:6px; color:#8fb5d8; font-size:10px; }
+.orderDepth > div > div {
+  display:flex;
+  justify-content:space-between;
+  padding:4px 0;
+  border-top:1px solid #14273a;
+  font-size:10px;
+}
+.dataPendingNote {
+  margin-top:8px;
+  color:#6e8aa7;
+  font-size:9px;
+}
+
+.chartFrames { display:flex; gap:5px; }
+.stockChartPanel { display:block; }
+.stockChartCanvas { width:100%; height:420px; }
+.chartLegend {
+  display:flex;
+  gap:10px;
+  margin-top:7px;
+  color:#718eaa;
+  font-size:9px;
+}
+.chartLegend .ma20 { color:#f3c646; }
+.chartLegend .ma50 { color:#4aa3ff; }
+.chartLegend .ma200 { color:#b66cff; }
+
+@media (max-width:760px) {
+  .marketSticky {
+    top:0;
+    margin-inline:-7px;
+    padding-inline:7px;
+  }
+  .indexTickerCard {
+    flex-basis:180px;
+    min-width:180px;
+  }
+  .indexTickerTop > span { font-size:15px; }
+
+  .watchlistToolbar {
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .watchlistActions { width:100%; }
+  .watchlistActions select { flex:1; }
+
+  .watchlistHeader { display:none; }
+  .stockGridRow {
+    grid-template-columns: 1fr 1fr 34px;
+  }
+  .watchlistRow > div:nth-child(3) {
+    grid-column:1 / 3;
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+  .watchlistRow > div:nth-child(3) small {
+    margin:0;
+  }
+  .removeSymbol {
+    grid-column:3;
+    grid-row:1 / 3;
+  }
+
+  .stockDetailColumns { grid-template-columns:1fr; }
+  .stockHeroTop { align-items:flex-start; }
+  .stockHero h2 { font-size:14px; }
+  .stockHeroPriceBox strong { font-size:25px; }
+  .orderDepth { grid-template-columns:1fr; }
+
+  /* Requirement: technical chart only on desktop. */
+  .stockChartPanel { display:none; }
+}
