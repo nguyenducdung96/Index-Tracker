@@ -4,8 +4,9 @@ import type { Dashboard } from "./types";
 import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 import { StocksTab } from "./components/stocks/StocksTab";
+import { ResponsiveTabBar } from "./components/ResponsiveTabBar";
 
-const APP_VERSION = "V8.6.3";
+const APP_VERSION = "V8.7";
 type MainTab = "gold" | "stocks" | "fx" | "commodities" | "news";
 
 const empty: Dashboard = {
@@ -55,13 +56,19 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="Các nhóm dữ liệu">
-        <button className={tab === "gold" ? "active" : ""} onClick={() => setTab("gold")}>Vàng</button>
-        <button className={tab === "stocks" ? "active" : ""} onClick={() => setTab("stocks")}>Chứng khoán</button>
-        <button className={tab === "fx" ? "active" : ""} disabled>FX</button>
-        <button className={tab === "commodities" ? "active" : ""} disabled>Hàng hóa</button>
-        <button className={tab === "news" ? "active" : ""} disabled>Tin tức</button>
-      </nav>
+      <ResponsiveTabBar<MainTab>
+        className="mainResponsiveTabs"
+        ariaLabel="Các nhóm dữ liệu"
+        activeId={tab}
+        onChange={setTab}
+        items={[
+          { id: "gold", label: "Vàng" },
+          { id: "stocks", label: "Chứng khoán" },
+          { id: "fx", label: "FX", disabled: true },
+          { id: "commodities", label: "Hàng hóa", disabled: true },
+          { id: "news", label: "Tin tức", disabled: true }
+        ]}
+      />
 
       {tab === "gold" && (
         <>

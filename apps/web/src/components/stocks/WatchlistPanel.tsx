@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { StockQuote, Watchlist } from "../../types";
 
 type SortKey = "change" | "value" | "code";
@@ -51,8 +51,28 @@ export function WatchlistPanel({
 }) {
   const [sort, setSort] = useState<SortKey>("value");
   const [newSymbol, setNewSymbol] = useState("");
+  const [listMenuOpen, setListMenuOpen] = useState(false);
+  const listMenuRef = useRef<HTMLDivElement>(null);
 
   const active = watchlists.find(x => x.id === activeId) ?? watchlists[0];
+
+  useEffect(() => {
+    if (!listMenuOpen) return;
+    const close = (event: MouseEvent | TouchEvent) => {
+      if (!listMenuRef.current?.contains(event.target as Node)) setListMenuOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setListMenuOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close, { passive: true });
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [listMenuOpen]);
 
   const sorted = useMemo(() => {
     const copy = [...quotes];
@@ -77,17 +97,55 @@ export function WatchlistPanel({
   return (
     <section className="stockPanel watchlistPanel">
       <div className="watchlistToolbar">
-        <div className="watchlistTabs">
-          {watchlists.map(w => (
+        <div className="watchlistSelector" ref={listMenuRef}>
+          <div className="watchlistTabs">
+            {watchlists.map(w => (
+              <button
+                key={w.id}
+                className={w.id === active?.id ? "active" : ""}
+                onClick={() => onChangeList(w.id)}
+              >
+                {w.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="watchlistMobilePicker">
             <button
-              key={w.id}
-              className={w.id === active?.id ? "active" : ""}
-              onClick={() => onChangeList(w.id)}
+              type="button"
+              className="watchlistCurrent"
+              aria-haspopup="menu"
+              aria-expanded={listMenuOpen}
+              onClick={() => setListMenuOpen(value => !value)}
             >
-              {w.name}
+              <span>{active?.name ?? "Watchlist"}</span><span>▾</span>
             </button>
-          ))}
-          <button className="watchlistAdd" onClick={createList}>＋</button>
+            <button
+              type="button"
+              className="watchlistMenuButton"
+              aria-label="Mở danh sách watchlist"
+              onClick={() => setListMenuOpen(value => !value)}
+            >☰</button>
+          </div>
+
+          {listMenuOpen && (
+            <div className="watchlistMenu" role="menu">
+              {watchlists.map(w => (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={w.id === active?.id ? "active" : ""}
+                  onClick={() => { onChangeList(w.id); setListMenuOpen(false); }}
+                >
+                  <span>{w.name}</span>
+                  {w.id === active?.id && <span>✓</span>}
+                </button>
+              ))}
+              <button type="button" className="watchlistMenuCreate" onClick={() => { setListMenuOpen(false); createList(); }}>＋ Tạo watchlist</button>
+            </div>
+          )}
+
+          <button className="watchlistAdd" onClick={createList} title="Tạo watchlist">＋</button>
         </div>
 
         <div className="watchlistActions">
