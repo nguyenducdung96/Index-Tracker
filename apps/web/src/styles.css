@@ -2178,3 +2178,157 @@ footer,
   .watchlistSelector > .watchlistAdd { display:none; }
   .watchlistToolbar { gap:8px; }
 }
+
+
+/* ==========================================================
+   V8.8 — INDUSTRY ENGINE / PORTS
+   ========================================================== */
+
+.industryTab, .portIndustry { display: grid; gap: 14px; }
+.industrySelector, .portSubTabs { margin-top: 2px; }
+
+.portPanel {
+  border: 1px solid #1d3852;
+  border-radius: 16px;
+  background: #081827;
+  padding: 16px;
+}
+
+.portHero, .portEntityHero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+.portHero h2, .portEntityHero h2 { margin: 4px 0 6px; font-size: 24px; }
+.portHero p, .portEntityHero p { margin: 0; max-width: 760px; color: #8eabc5; line-height: 1.55; }
+.portEyebrow { color: #35d8c7; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.portHeroActions { display: flex; gap: 8px; }
+.portHeroActions button {
+  border: 1px solid #2d5a79; background: #0c2235; color: #86cfff;
+  padding: 9px 12px; border-radius: 9px; cursor: pointer;
+}
+.portScopeNotice {
+  border-left: 3px solid #f2c94c; background: rgba(242,201,76,.06);
+  color: #b9c9d9; border-radius: 9px; padding: 10px 12px; font-size: 11px;
+}
+.portKpiGrid {
+  display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px;
+}
+.portKpiCard {
+  min-width: 0; border: 1px solid #1d3852; background: #0a1c2e;
+  border-radius: 14px; padding: 13px; display: flex; flex-direction: column; gap: 5px;
+}
+.portKpiCard > span { color: #6f92b0; font-size: 9px; text-transform: uppercase; }
+.portKpiCard > strong { font-size: 21px; line-height: 1.1; }
+.portKpiCard > strong em { font-style: normal; font-size: 10px; color: #7f9db7; }
+.portKpiCard > small { color: #7f9db7; font-size: 9px; }
+.portSourceChip { width: fit-content; color: #55cfff; text-decoration: none; font-size: 8px; margin-top: 3px; }
+
+.portSectionHead { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+.portSectionHead > div { display: flex; gap: 8px; align-items: center; }
+.portSectionHead h3 { margin: 0; font-size: 15px; }
+.portSectionIndex {
+  display: inline-flex; min-width: 27px; height: 23px; align-items:center; justify-content:center;
+  border: 1px solid #22cfc2; color:#35d8c7; border-radius: 6px; font-size: 9px; font-weight: 800;
+}
+.portMuted { color: #6888a5; font-size: 9px; }
+
+.portStockGrid { display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:8px; }
+.portStockCard {
+  text-decoration:none; color:inherit; border:1px solid #1c3850; border-radius:12px;
+  padding:10px; background:#091b2a; display:grid; gap:8px;
+}
+.portStockCard > div:first-child { display:flex; justify-content:space-between; gap:5px; }
+.portStockCard small { color:#6686a2; font-size:8px; }
+.portStockPrice { display:flex; justify-content:space-between; align-items:end; gap:5px; }
+.portStockPrice b { font-size:18px; }
+.portStockPrice span { font-size:9px; }
+.portStockVol { display:flex; gap:8px; justify-content:space-between; color:#7d9ab3; font-size:8px; }
+
+.portCompanyGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.portCompanyCard { border:1px solid #1d3852; background:#091b2a; border-radius:12px; padding:12px; }
+.portCompanyTitle { display:flex; justify-content:space-between; }
+.portCompanyTitle strong { color:#35d8c7; font-size:18px; }
+.portCompanyTitle span { color:#6f8da7; font-size:8px; }
+.portCompanyCard h4 { margin:6px 0; font-size:12px; }
+.portCompanyCard p { color:#7e9ab3; font-size:9px; line-height:1.5; min-height:28px; }
+.portCompanyCard > a { color:#55cfff; font-size:8px; text-decoration:none; }
+.portTerminalTags { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; }
+.portTerminalTags span { border:1px solid #23465f; border-radius:999px; padding:3px 6px; font-size:7px; color:#8ab0ce; }
+
+.portTimeline { display:grid; gap:0; }
+.portTimeline article { display:grid; grid-template-columns:80px 1fr auto; gap:12px; border-top:1px solid #163149; padding:10px 0; }
+.portTimeline article:first-child { border-top:0; }
+.portTimeline time { color:#35d8c7; font-size:9px; }
+.portTimeline strong { display:block; font-size:11px; }
+.portTimeline span, .portTimeline p { color:#7594ad; font-size:8px; margin:3px 0 0; }
+.portTimeline a { color:#55cfff; font-size:8px; text-decoration:none; }
+
+.portLimitPanel { border-color:#725d22; background:rgba(242,201,76,.035); }
+.portLimitPanel ul { margin:0; padding-left:20px; display:grid; gap:6px; color:#a9bccd; font-size:9px; line-height:1.5; }
+
+.portEntityPrice { text-align:right; display:grid; gap:4px; }
+.portEntityPrice strong { font-size:28px; }
+.portEntityPrice span { font-size:10px; }
+.portEntityPrice small { color:#7292ad; font-size:8px; }
+.portPendingBadge { color:#f2c94c; border:1px solid #76631f; padding:7px 9px; border-radius:9px; font-size:8px; }
+
+.portTerminalBoard { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.portTerminalBoard > div { border:1px solid #1d3852; border-radius:11px; padding:11px; display:grid; gap:5px; }
+.portTerminalBoard strong { font-size:11px; }
+.portTerminalBoard span { color:#7694ad; font-size:8px; }
+.portTerminalBoard .hot { border-color:#168f87; background:rgba(53,216,199,.05); }
+
+.portRelationGrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.portRelationGrid > div { background:#091b2a; border:1px solid #193750; border-radius:10px; padding:10px; display:grid; gap:5px; }
+.portRelationGrid span { color:#718fa9; font-size:8px; }
+.portRelationGrid strong { font-size:13px; }
+.portFootnote { color:#718da5; font-size:8px; line-height:1.5; margin:10px 0 0; }
+
+.portPipeline { display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:#8da8bf; }
+.portPipeline span { border:1px solid #1d4058; background:#091c2d; padding:8px 10px; border-radius:9px; font-size:9px; }
+.portPipeline b { color:#35d8c7; }
+
+.portSourceList { display:grid; gap:8px; }
+.portSourceList > a {
+  position:relative; text-decoration:none; color:inherit; border:1px solid #1d3852;
+  border-radius:11px; background:#091b2a; padding:11px 88px 11px 11px; display:grid; gap:4px;
+}
+.portSourceList strong { font-size:10px; }
+.portSourceList span, .portSourceList small { color:#7795ad; font-size:8px; }
+.sourceState {
+  position:absolute; top:50%; right:10px; transform:translateY(-50%);
+  font-style:normal; font-size:7px; padding:4px 6px; border-radius:999px; text-transform:uppercase;
+}
+.sourceState.tracked { background:rgba(24,229,140,.09); color:#18e58c; }
+.sourceState.manual { background:rgba(242,201,76,.09); color:#f2c94c; }
+.sourceState.pending-api { background:rgba(114,174,220,.08); color:#7db8e7; }
+
+@media (max-width:900px) {
+  .portKpiGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .portStockGrid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .portCompanyGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .portTerminalBoard, .portRelationGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:760px) {
+  .portPanel { padding:11px; border-radius:13px; }
+  .portHero, .portEntityHero { display:grid; gap:10px; }
+  .portHero h2, .portEntityHero h2 { font-size:19px; }
+  .portHeroActions { width:100%; }
+  .portHeroActions button { flex:1; min-width:0; font-size:9px; }
+  .portKpiGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .portKpiCard { padding:10px; }
+  .portKpiCard > strong { font-size:16px; }
+  .portStockGrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+  .portCompanyGrid { grid-template-columns:1fr; }
+  .portTerminalBoard, .portRelationGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .portTimeline article { grid-template-columns:58px 1fr; }
+  .portTimeline article > a { grid-column:2; }
+  .portSectionHead { align-items:flex-start; }
+  .portMuted { display:none; }
+  .portEntityPrice { text-align:left; }
+  .portEntityPrice strong { font-size:23px; }
+  .portSourceList > a { padding-right:75px; }
+}

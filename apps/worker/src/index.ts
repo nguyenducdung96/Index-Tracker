@@ -11,6 +11,7 @@ import { validateVietnamQuotes, vietnamQualityConfig } from "./quality.js";
 import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
 import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
+import { getPortOverview, getPortSources } from "./providers/industry/ports.js";
 import {
   addWatchlistSymbol,
   createWatchlist,
@@ -273,6 +274,14 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
   }
 
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  if (url.pathname === "/api/industry/ports/overview") {
+    return json(getPortOverview());
+  }
+
+  if (url.pathname === "/api/industry/ports/sources") {
+    return json(getPortSources());
+  }
 
   if (url.pathname === "/api/stocks/indices") {
     try {

@@ -121,3 +121,16 @@ export async function removeWatchlistSymbol(id: number, symbol: string) {
   if (!r.ok) throw new Error(`Remove watchlist symbol HTTP ${r.status}`);
   return r.json();
 }
+
+
+export async function getPortOverview() {
+  const r = await fetch(`${BASE}/api/industry/ports/overview`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Port overview HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getPortSources() {
+  const r = await fetch(`${BASE}/api/industry/ports/sources`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Port sources HTTP ${r.status}`);
+  return r.json();
+}

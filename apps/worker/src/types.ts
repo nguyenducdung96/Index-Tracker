@@ -125,3 +125,58 @@ export type Watchlist = {
   createdAt?: number;
   updatedAt?: number;
 };
+
+
+export type PortSource = {
+  id: string;
+  label: string;
+  organization: string;
+  url: string;
+  sourceKind: "official" | "company-official" | "public-reference";
+  updateCadence: string;
+  coverage: string;
+  status: "tracked" | "manual" | "pending-api";
+  note?: string;
+};
+
+export type PortMetric = {
+  id: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  period: string;
+  yoyPct?: number | null;
+  sourceId: string;
+  quality: "official" | "derived" | "proxy" | "pending";
+  note?: string;
+};
+
+export type PortCompany = {
+  symbol: string;
+  name: string;
+  region: "Bắc" | "Trung" | "Nam";
+  focus: string;
+  terminals: string[];
+  officialUrl?: string | null;
+};
+
+export type PortEvent = {
+  date: string;
+  title: string;
+  entity: string;
+  kind: "capacity" | "route" | "financial" | "regulation" | "operations";
+  sourceId: string;
+  note?: string;
+};
+
+export type PortOverviewResponse = {
+  industry: "PORTS";
+  scope: string;
+  asOf: string;
+  metrics: PortMetric[];
+  companies: PortCompany[];
+  events: PortEvent[];
+  sources: PortSource[];
+  limitations: string[];
+  serverTime: string;
+};

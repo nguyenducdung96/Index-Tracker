@@ -5,9 +5,10 @@ import { TradingViewGoldLive } from "./components/TradingViewGold";
 import { VietnamTable } from "./components/VietnamTable";
 import { StocksTab } from "./components/stocks/StocksTab";
 import { ResponsiveTabBar } from "./components/ResponsiveTabBar";
+import { IndustryTab } from "./components/industry/IndustryTab";
 
-const APP_VERSION = "V8.7";
-type MainTab = "gold" | "stocks" | "fx" | "commodities" | "news";
+const APP_VERSION = "V8.8";
+type MainTab = "gold" | "stocks" | "industry" | "fx" | "commodities" | "news";
 
 const empty: Dashboard = {
   world: null,
@@ -64,6 +65,7 @@ export default function App() {
         items={[
           { id: "gold", label: "Vàng" },
           { id: "stocks", label: "Chứng khoán" },
+          { id: "industry", label: "Ngành" },
           { id: "fx", label: "FX", disabled: true },
           { id: "commodities", label: "Hàng hóa", disabled: true },
           { id: "news", label: "Tin tức", disabled: true }
@@ -78,6 +80,8 @@ export default function App() {
       )}
 
       {tab === "stocks" && <StocksTab />}
+
+      {tab === "industry" && <IndustryTab />}
     </main>
   );
 }
