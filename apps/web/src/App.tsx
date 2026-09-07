@@ -7,7 +7,7 @@ import { StocksTab } from "./components/stocks/StocksTab";
 import { ResponsiveTabBar } from "./components/ResponsiveTabBar";
 import { IndustryTab } from "./components/industry/IndustryTab";
 
-const APP_VERSION = "V8.11";
+const APP_VERSION = "V8.11.1";
 type MainTab = "gold" | "stocks" | "industry" | "fx" | "commodities" | "news";
 
 const empty: Dashboard = {

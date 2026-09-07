@@ -162,7 +162,7 @@ function OwnershipPanel({relationships}:{relationships:PortRelationship[]}) {
       {relationships.map((x,i)=><article key={`${x.companySymbol}-${x.terminalCode}-${i}`}>
         <div>
           <strong>{x.terminalLabel ?? x.relatedCompany ?? x.companySymbol}</strong>
-          <span>{x.relationshipType.replaceAll("_"," ")}</span>
+          <span>{x.relationshipType.replace(/_/g, " ")}</span>
         </div>
         <div className="portOwnershipPct">
           <b>{x.ownershipPct==null?"—":`${x.ownershipPct.toFixed(x.ownershipPct%1?2:0)}%`}</b>
