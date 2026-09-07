@@ -1,0 +1,30 @@
+import * as XLSX from "xlsx";
+import * as cheerio from "cheerio";
+
+const STATS_URL="https://vimawa.gov.vn/vi/thong-ke";
+const QN_URL="https://kht1.cangvuhanghaiquangninh.gov.vn/";
+const QNHON_URL="https://cangvuhanghaiquynhon.gov.vn/index.aspx?cat=2014&page=news";
+const UA={"user-agent":"MarketTracker/8.17 (+official-source-reader)"};
+const abs=(href:string,base:string)=>new URL(href,base).toString();
+const n=(v:unknown):number|null=>{if(typeof v==="number"&&Number.isFinite(v))return v;if(typeof v!=="string")return null;const s=v.replace(/\s/g,"").replace(/\./g,"").replace(/,/g,".").replace(/[^0-9.-]/g,"");const x=Number(s);return Number.isFinite(x)?x:null};
+const txt=(v:unknown)=>String(v??"").replace(/\s+/g," ").trim();
+function periodFromTitle(s:string){const m=s.match(/tháng\s*(\d{1,2}).*?(20\d{2})/i)||s.match(/đến\s*tháng\s*(\d{1,2}).*?(20\d{2})/i);return m?`${m[2]}-${m[1].padStart(2,"0")}`:null}
+
+export type VimawaReport={title:string;period:string|null;publishedDate:string|null;pageUrl:string;xlsxUrl:string|null};
+export async function discoverVimawaReports(limit=24):Promise<VimawaReport[]>{
+ const r=await fetch(STATS_URL,{headers:UA});if(!r.ok)throw new Error(`VIMAWA stats HTTP ${r.status}`);const $=cheerio.load(await r.text());const out:VimawaReport[]=[];
+ $("a").each((_,a)=>{const title=txt($(a).text());if(!/hàng hóa thông qua cảng|khối lượng hàng hóa thông qua cảng biển/i.test(title))return;const href=$(a).attr("href");if(!href)return;out.push({title,period:periodFromTitle(title),publishedDate:null,pageUrl:abs(href,STATS_URL),xlsxUrl:null})});
+ const uniq=[...new Map(out.map(x=>[x.pageUrl,x])).values()].slice(0,limit);
+ for(const item of uniq){try{const p=await fetch(item.pageUrl,{headers:UA});if(!p.ok)continue;const $$=cheerio.load(await p.text());const link=$$("a[href$='.xlsx'],a[href*='.xlsx?']").first().attr("href");if(link)item.xlsxUrl=abs(link,item.pageUrl);const body=txt($$("body").text());const d=body.match(/(\d{2}\/\d{2}\/20\d{2})/);if(d)item.publishedDate=d[1];}catch{}}
+ return uniq;
+}
+
+function parseWorkbook(buf:ArrayBuffer,report:VimawaReport){const wb=XLSX.read(buf,{type:"array"});const metrics:any[]=[];
+ for(const name of wb.SheetNames){const rows:any[][]=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});for(const row of rows){const label=row.map(txt).join(" ");if(!/tổng số|hàng xuất khẩu|hàng nhập khẩu|hàng nội địa|hàng quá cảnh|container/i.test(label))continue;const nums=row.map(n).filter((x):x is number=>x!==null);if(nums.length<2)continue;let metric="OTHER";if(/container/i.test(label))metric="CONTAINER";else if(/xuất khẩu/i.test(label))metric="EXPORT";else if(/nhập khẩu/i.test(label))metric="IMPORT";else if(/nội địa/i.test(label))metric="DOMESTIC";else if(/quá cảnh/i.test(label))metric="TRANSIT";else if(/tổng số/i.test(label))metric="TOTAL";metrics.push({sheet:name,metric,label:txt(row.find(x=>typeof x==="string"&&txt(x))??label),values:nums});}}
+ return {report,metrics,parserVersion:"v8.17-xlsx-flex-1"};}
+export async function fetchVimawaHistorical(limit=12){const reports=await discoverVimawaReports(limit);const points:any[]=[];for(const report of reports){if(!report.xlsxUrl||!report.period)continue;try{const r=await fetch(report.xlsxUrl,{headers:UA});if(!r.ok)continue;const parsed=parseWorkbook(await r.arrayBuffer(),report);for(const m of parsed.metrics)points.push({period:report.period,metric:m.metric,label:m.label,values:m.values,sourceUrl:report.pageUrl,publishedDate:report.publishedDate});}catch{}}
+ return {provider:"VIMAWA",status:points.length?"PARSED":"PARTIAL",reports,points,note:"Raw official XLSX rows are preserved as numeric arrays because VIMAWA workbook layouts vary by period. No guessed column mapping is applied.",serverTime:new Date().toISOString()};}
+
+export async function getQuangNinhMovements(){try{const r=await fetch(QN_URL,{headers:UA});if(!r.ok)throw new Error(`HTTP ${r.status}`);const $=cheerio.load(await r.text());const rows:any[]=[];$("tr").each((_,tr)=>{const c=$(tr).find("td").map((__,td)=>txt($(td).text())).get();if(c.length<7)return;const joined=c.join(" ");if(!/\d/.test(joined))return;const dwt=c.map(n).find(x=>x!==null&&x>1000)??null;rows.push({cells:c,dwt});});return {source:"Cảng vụ Hàng hải Quảng Ninh",sourceUrl:QN_URL,status:rows.length?"LIVE_PARSED":"PARTIAL",rows,serverTime:new Date().toISOString(),note:"Official movement-plan rows. Raw cells retained; terminal-field normalization is intentionally conservative."};}catch(e){return {source:"Cảng vụ Hàng hải Quảng Ninh",sourceUrl:QN_URL,status:"SOURCE_UNAVAILABLE",rows:[],serverTime:new Date().toISOString(),note:e instanceof Error?e.message:String(e)}}}
+export async function getQuyNhonStatus(){try{const r=await fetch(QNHON_URL,{headers:UA});if(!r.ok)throw new Error(`HTTP ${r.status}`);const $=cheerio.load(await r.text());const reports:string[]=[];$("a").each((_,a)=>{const t=txt($(a).text());if(/KẾ HOẠCH ĐIỀU ĐỘNG TÀU NGÀY/i.test(t))reports.push(t)});return {source:"Cảng vụ Hàng hải Quy Nhơn",sourceUrl:QNHON_URL,status:reports.length?"PARTIAL":"SOURCE_UNAVAILABLE",reportCount:reports.length,reports:reports.slice(0,20),note:"Archive discovery only. Detail rows are image-based on sampled reports, so V8.17 does not OCR them into official structured data.",serverTime:new Date().toISOString()};}catch(e){return {source:"Cảng vụ Hàng hải Quy Nhơn",sourceUrl:QNHON_URL,status:"SOURCE_UNAVAILABLE",reportCount:0,reports:[],note:e instanceof Error?e.message:String(e),serverTime:new Date().toISOString()}}}
+export async function getPortSourceHealth(){const settled=await Promise.allSettled([discoverVimawaReports(3),getQuangNinhMovements(),getQuyNhonStatus()]);return {data:{vimawa:{status:settled[0].status==="fulfilled"&&settled[0].value.length?"OK":"ERROR",latestPeriod:settled[0].status==="fulfilled"?settled[0].value[0]?.period:null},quangninh:{status:settled[1].status==="fulfilled"?settled[1].value.status:"ERROR"},quynhon:{status:settled[2].status==="fulfilled"?settled[2].value.status:"ERROR"}},serverTime:new Date().toISOString()};}

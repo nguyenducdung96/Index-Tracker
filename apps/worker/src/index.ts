@@ -13,6 +13,7 @@ import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from 
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import { getPortOverview, getPortSources, getPortCompanyPortfolio } from "./providers/industry/ports.js";
 import { getNationalPortStats, getNationalPortSourceRegistry } from "./providers/industry/portsNational.js";
+import { fetchVimawaHistorical, getQuangNinhMovements, getQuyNhonStatus, getPortSourceHealth } from "./providers/industry/portsNationalHistory.js";
 import {
   backfillHaiphongChunk,
   bootstrapHaiphongIfNeeded,
@@ -386,6 +387,11 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
   if (url.pathname === "/api/industry/ports/source-registry") {
     return json(getNationalPortSourceRegistry());
   }
+
+  if (url.pathname === "/api/industry/ports/national-history") return json(await fetchVimawaHistorical(12));
+  if (url.pathname === "/api/industry/ports/quangninh/movements") return json(await getQuangNinhMovements());
+  if (url.pathname === "/api/industry/ports/quynhon/status") return json(await getQuyNhonStatus());
+  if (url.pathname === "/api/industry/ports/source-health") return json(await getPortSourceHealth());
 
   if (url.pathname === "/api/industry/ports/overview") {
     return json(getPortOverview());

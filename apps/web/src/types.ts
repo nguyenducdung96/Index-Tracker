@@ -508,3 +508,6 @@ export type PortCompanyPortfolio = {
 
 export type NationalPortAuthorityStat = { authority:string; shipCalls:number|null; gtTotal:number|null; domesticCalls:number|null; domesticGt:number|null; foreignCalls:number|null; foreignGt:number|null; inlandCalls:number|null; inlandCargoTons:number|null; cargoTons:number|null; containerTeu:number|null; passengers:number|null; };
 export type NationalPortStatsResponse = { provider:"VIMAWA"; sourceUrl:string; sourceKind:"OFFICIAL_GOV"; fetchedAt:string; dataStatus:"LIVE_PARSED"|"SOURCE_UNAVAILABLE"; rows:NationalPortAuthorityStat[]; totals:{shipCalls:number|null;cargoTons:number|null;containerTeu:number|null;authorities:number}; note:string; };
+
+export type NationalPortHistoryResponse={provider:"VIMAWA";status:"PARSED"|"PARTIAL";reports:Array<{title:string;period:string|null;publishedDate:string|null;pageUrl:string;xlsxUrl:string|null}>;points:Array<{period:string;metric:string;label:string;values:number[];sourceUrl:string;publishedDate:string|null}>;note:string;serverTime:string};
+export type PortSourceHealthResponse={data:{vimawa:{status:string;latestPeriod:string|null};quangninh:{status:string};quynhon:{status:string}};serverTime:string};
