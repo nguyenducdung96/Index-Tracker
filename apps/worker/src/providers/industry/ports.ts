@@ -65,152 +65,68 @@ const sources: PortSource[] = [
   }
 ];
 
-const metrics: PortMetric[] = [
-  {
-    id: "php-throughput-2025",
-    label: "PHP hàng hóa thông qua",
-    value: 42.672,
-    unit: "triệu tấn",
-    period: "2025",
-    yoyPct: 6.9,
-    sourceId: "php-news",
-    quality: "official",
-    note: "Số liệu hợp nhất doanh nghiệp công bố."
-  },
-  {
-    id: "php-teu-2025",
-    label: "PHP container",
-    value: 2.072,
-    unit: "triệu TEU",
-    period: "2025",
-    yoyPct: 12.3,
-    sourceId: "php-news",
-    quality: "official"
-  },
-  {
-    id: "php-revenue-2025",
-    label: "PHP doanh thu",
-    value: 3545,
-    unit: "tỷ VND",
-    period: "2025",
-    yoyPct: 36.6,
-    sourceId: "php-news",
-    quality: "official",
-    note: "Công bố doanh nghiệp tháng 01/2026."
-  },
-  {
-    id: "php-pbt-2025",
-    label: "PHP lợi nhuận trước thuế",
-    value: 1280,
-    unit: "tỷ VND",
-    period: "2025",
-    yoyPct: 6.7,
-    sourceId: "php-news",
-    quality: "official"
-  }
+const metrics: PortMetric[] = [];
+
+/*
+ * V8.14 listed-port universe.
+ * Classification is deliberately explicit so a port operator, a multi-port
+ * logistics group and a holding company are not presented as equivalent.
+ * Exchange status is sourced from HNX/HOSE/VSDC profiles or official issuer
+ * disclosures; company websites are used as the operating-company link.
+ */
+const companies: PortCompany[] = [
+  {symbol:"PHP",name:"CTCP Cảng Hải Phòng",exchange:"UPCOM",region:"Bắc",locality:"Hải Phòng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác hệ thống cảng Hải Phòng và tham gia bến nước sâu Lạch Huyện.",terminals:["Tân Vũ","Chùa Vẽ","Hoàng Diệu","HTIT"],officialUrl:"https://haiphongport.com.vn/",exchangeSourceUrl:"https://hnx.vn/vi-vn/ModuleIssuer/UC_Issuer/Details/PHP/UC",verifiedAsOf:"2026-09-08"},
+  {symbol:"VGR",name:"CTCP Cảng Xanh VIP",exchange:"UPCOM",region:"Bắc",locality:"Hải Phòng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác VIP Green Port tại khu vực Đình Vũ – Cát Hải.",terminals:["VIP Green Port"],officialUrl:"https://vipgreenport.com.vn/",exchangeSourceUrl:"https://upcom.hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-etf-vgr.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"DVP",name:"CTCP Đầu tư và Phát triển Cảng Đình Vũ",exchange:"HOSE",region:"Bắc",locality:"Hải Phòng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác Cảng Đình Vũ.",terminals:["Cảng Đình Vũ"],officialUrl:"https://dinhvuport.com.vn/",exchangeSourceUrl:"https://www.dinhvuport.com.vn/",verifiedAsOf:"2026-09-08"},
+  {symbol:"DXP",name:"CTCP Cảng Đoạn Xá",exchange:"HNX",region:"Bắc",locality:"Hải Phòng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác cảng và dịch vụ logistics tại Hải Phòng.",terminals:["Đoạn Xá"],officialUrl:"https://doanxaport.com.vn/",exchangeSourceUrl:"https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-ny-dxp.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"PSP",name:"CTCP Cảng Dịch vụ Dầu khí Đình Vũ",exchange:"UPCOM",region:"Bắc",locality:"Hải Phòng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Cảng dịch vụ dầu khí và hàng tổng hợp tại Đình Vũ.",terminals:["PTSC Đình Vũ"],officialUrl:"http://www.ptscdinhvu.com.vn/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-psp.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"CQN",name:"CTCP Cảng Quảng Ninh",exchange:"UPCOM",region:"Bắc",locality:"Quảng Ninh",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác cảng tại khu vực Quảng Ninh/Cái Lân.",terminals:["Cảng Quảng Ninh"],officialUrl:null,exchangeSourceUrl:"https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-CQN.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"NAP",name:"CTCP Cảng Nghệ Tĩnh",exchange:"HNX",region:"Trung",locality:"Nghệ An",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác hệ thống cảng khu vực Nghệ An – Hà Tĩnh.",terminals:["Cửa Lò","Bến Thủy"],officialUrl:"http://nghetinhport.com.vn/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/m-tim-kiem-NAP.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"CDN",name:"CTCP Cảng Đà Nẵng",exchange:"HNX",region:"Trung",locality:"Đà Nẵng",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác cảng biển khu vực Đà Nẵng.",terminals:["Tiên Sa"],officialUrl:"https://danangport.com/",exchangeSourceUrl:"https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-ny-cdn.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"QNP",name:"CTCP Cảng Quy Nhơn",exchange:"HOSE",region:"Trung",locality:"Quy Nhơn",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác Cảng Quy Nhơn.",terminals:["Cảng Quy Nhơn"],officialUrl:"https://quynhonport.vn/",exchangeSourceUrl:"https://vsdc.vn/vi/ad/196872",verifiedAsOf:"2026-09-08"},
+  {symbol:"QSP",name:"CTCP Tân Cảng Quy Nhơn",exchange:"UPCOM",region:"Trung",locality:"Quy Nhơn",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác Tân Cảng Quy Nhơn.",terminals:["Tân Cảng Quy Nhơn"],officialUrl:"http://quynhonnewport.vn/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/m-tim-kiem-QSP.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"PDN",name:"CTCP Cảng Đồng Nai",exchange:"HOSE",region:"Nam",locality:"Đồng Nai",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Khai thác cảng tổng hợp/container tại Đồng Nai.",terminals:["Cảng Đồng Nai"],officialUrl:"https://dongnai-port.com/",exchangeSourceUrl:"https://dongnai-port.com/",verifiedAsOf:"2026-09-08"},
+  {symbol:"PAP",name:"CTCP Dầu khí Đầu tư Khai thác Cảng Phước An",exchange:"UPCOM",region:"Nam",locality:"Đồng Nai",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Đầu tư và khai thác Cảng Phước An.",terminals:["Cảng Phước An"],officialUrl:"https://pap.vn/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/m-tim-kiem-PAP.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"SGP",name:"CTCP Cảng Sài Gòn",exchange:"UPCOM",region:"Nam",locality:"TP.HCM",classification:"DIRECT_PORT",classificationLabel:"Cảng trực tiếp",focus:"Hệ thống cảng và dịch vụ hàng hải khu vực TP.HCM.",terminals:["Cảng Sài Gòn"],officialUrl:"https://saigonport.vn/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-sgp.html",verifiedAsOf:"2026-09-08"},
+  {symbol:"GMD",name:"CTCP Gemadept",exchange:"HOSE",region:"Nam",locality:"Đa vùng",classification:"MULTI_PORT_LOGISTICS",classificationLabel:"Đa cảng + Logistics",focus:"Mạng lưới cảng và logistics Bắc–Nam, gồm Nam Đình Vũ và Gemalink.",terminals:["Nam Đình Vũ","Gemalink"],officialUrl:"https://www.gemadept.com.vn/",exchangeSourceUrl:"https://www.gemadept.com.vn/",verifiedAsOf:"2026-09-08"},
+  {symbol:"VSC",name:"CTCP Container Việt Nam",exchange:"HOSE",region:"Bắc",locality:"Hải Phòng",classification:"MULTI_PORT_LOGISTICS",classificationLabel:"Cảng + Logistics",focus:"Hệ sinh thái cảng container và logistics tại Hải Phòng.",terminals:["Green Port","VIP Green","Nam Hải Đình Vũ"],officialUrl:"https://viconship.com/",exchangeSourceUrl:"https://vsdc.vn/vi/ad/171073",verifiedAsOf:"2026-09-08"},
+  {symbol:"HAH",name:"CTCP Vận tải và Xếp dỡ Hải An",exchange:"HOSE",region:"Bắc",locality:"Hải Phòng",classification:"RELATED_PORT_SHIPPING",classificationLabel:"Shipping + Port",focus:"Vận tải container kết hợp khai thác cảng Hải An.",terminals:["Cảng Hải An"],officialUrl:"https://haiants.vn/",exchangeSourceUrl:"https://haiants.vn/",verifiedAsOf:"2026-09-08"},
+  {symbol:"MVN",name:"Tổng công ty Hàng hải Việt Nam - CTCP",exchange:"UPCOM",region:"Bắc",locality:"Toàn quốc",classification:"HOLDING_PORT_NETWORK",classificationLabel:"Holding hệ cảng",focus:"Holding hàng hải có hệ thống doanh nghiệp cảng và vận tải trên toàn quốc.",terminals:[],officialUrl:"https://vimc.co/",exchangeSourceUrl:"https://www.hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-mvn.html",verifiedAsOf:"2026-09-08"}
 ];
 
-const companies: PortCompany[] = [
-  {
-    symbol: "PHP",
-    name: "Cảng Hải Phòng",
-    region: "Bắc",
-    focus: "Cụm cảng Hải Phòng; terminal thường + nước sâu Lạch Huyện.",
-    terminals: ["Tân Vũ", "Chùa Vẽ", "Hoàng Diệu", "HTIT"],
-    officialUrl: "https://haiphongport.com.vn/"
-  },
-  {
-    symbol: "DVP",
-    name: "Đầu tư và Phát triển Cảng Đình Vũ",
-    region: "Bắc",
-    focus: "Cảng container khu vực Đình Vũ, Hải Phòng.",
-    terminals: ["Cảng Đình Vũ"],
-    officialUrl: null
-  },
-  {
-    symbol: "DXP",
-    name: "Cảng Đoạn Xá",
-    region: "Bắc",
-    focus: "Khai thác cảng/logistics Hải Phòng.",
-    terminals: ["Đoạn Xá"],
-    officialUrl: null
-  },
-  {
-    symbol: "GMD",
-    name: "Gemadept",
-    region: "Nam",
-    focus: "Mạng lưới cảng và logistics Bắc–Nam; cảng nước sâu Gemalink.",
-    terminals: ["Nam Đình Vũ", "Gemalink"],
-    officialUrl: "https://www.gemadept.com.vn/"
-  },
-  {
-    symbol: "VSC",
-    name: "Container Việt Nam",
-    region: "Bắc",
-    focus: "Cảng container và logistics Hải Phòng.",
-    terminals: ["Green Port", "VIP Green"],
-    officialUrl: "https://viconship.com/"
-  },
-  {
-    symbol: "PDN",
-    name: "Cảng Đồng Nai",
-    region: "Nam",
-    focus: "Cảng tổng hợp/container khu vực Đồng Nai.",
-    terminals: ["Đồng Nai"],
-    officialUrl: "https://dongnai-port.com/"
-  }
+const regionCoverage = [
+  {id:"haiphong",label:"Hải Phòng",macroRegion:"Bắc" as const,status:"live" as const,detail:"Official ship-plan collector đang chạy; terminal/DWT normalization đã có.",officialUrl:"https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx?d=0"},
+  {id:"quangninh",label:"Quảng Ninh",macroRegion:"Bắc" as const,status:"source-found" as const,detail:"Đã xác định nguồn Cảng vụ/issuer chính thức; chưa production collector.",officialUrl:"https://www.cangvuhanghaiquangninh.gov.vn/"},
+  {id:"danang",label:"Đà Nẵng",macroRegion:"Trung" as const,status:"research" as const,detail:"Universe doanh nghiệp đã xác minh; collector vận hành chưa triển khai.",officialUrl:null},
+  {id:"quynhon",label:"Quy Nhơn",macroRegion:"Trung" as const,status:"source-found" as const,detail:"Đã xác định nguồn kế hoạch điều động tàu Cảng vụ; chưa production collector.",officialUrl:"https://cangvuhanghaiquynhon.gov.vn/"},
+  {id:"dongnai",label:"Đồng Nai",macroRegion:"Nam" as const,status:"research" as const,detail:"PDN/PAP đã vào universe; dữ liệu Cảng vụ cần chuẩn hóa phạm vi trước khi ingest.",officialUrl:null},
+  {id:"hcm-caimep",label:"TP.HCM / Cái Mép",macroRegion:"Nam" as const,status:"source-found" as const,detail:"Đã xác định nguồn điều động tàu khu vực Vũng Tàu/Cái Mép; chưa production collector.",officialUrl:"https://cangvuhanghaivungtau.gov.vn/"}
 ];
 
 const events: PortEvent[] = [
-  {
-    date: "2025",
-    title: "Bến số 3–4 Lạch Huyện được đưa vào khai thác",
-    entity: "PHP / HTIT",
-    kind: "capacity",
-    sourceId: "php-news",
-    note: "Mở rộng năng lực tiếp nhận tàu trọng tải lớn và công suất container."
-  },
-  {
-    date: "14/12/2025",
-    title: "Cảng Hải Phòng vượt mốc 2 triệu TEU/năm",
-    entity: "PHP",
-    kind: "operations",
-    sourceId: "php-news"
-  },
-  {
-    date: "23/04/2026",
-    title: "ĐHĐCĐ 2026 xác nhận tăng trưởng sản lượng container 2025",
-    entity: "PHP",
-    kind: "financial",
-    sourceId: "php-news"
-  },
-  {
-    date: "01/07/2024",
-    title: "Khung giá dịch vụ cảng biển mới",
-    entity: "Ngành cảng",
-    kind: "regulation",
-    sourceId: "port-price",
-    note: "Theo các quyết định 809/810/811/814 và Thông tư 12/2024."
-  }
+  {date:"01/07/2024",title:"Khung giá dịch vụ cảng biển mới có hiệu lực",entity:"Ngành cảng Việt Nam",kind:"regulation",sourceId:"port-price",note:"Theo hệ thống văn bản quản lý giá dịch vụ cảng biển; cần theo dõi effective date khi pricing monitor được triển khai."},
+  {date:"2025",title:"Bến 3–4 Lạch Huyện đi vào khai thác",entity:"Cụm cảng Hải Phòng",kind:"capacity",sourceId:"php-news",note:"Bổ sung năng lực cảng nước sâu tại Hải Phòng; event ngành/khu vực, không dùng làm KPI tổng quan PHP."},
+  {date:"30/09/2025",title:"Giai đoạn 3 Nam Đình Vũ đi vào hoạt động",entity:"Cụm cảng Hải Phòng",kind:"capacity",sourceId:"php-news",note:"Mở rộng capacity của cụm Nam Đình Vũ; số liệu chi tiết nằm ở Company/Terminal layer."}
 ];
 
 export function getPortOverview(): PortOverviewResponse {
   return {
-    industry: "PORTS",
-    scope: "MVP Hải Phòng/PHP + company map Việt Nam",
-    asOf: "2026-09-08",
+    industry:"PORTS",
+    scope:"Vietnam listed-port universe + regional data coverage",
+    asOf:"2026-09-08",
     metrics,
     companies,
     events,
     sources,
-    limitations: [
-      "DWT là trọng tải thiết kế của tàu, không phải khối lượng hàng thực tế bốc xếp; không dùng DWT × giá để suy doanh thu.",
-      "V8.8 chưa có API public ổn định cho ship-call/DWT theo ngày từ Cảng vụ; phần này được đánh dấu pending thay vì tự scrape nguồn trả phí.",
-      "KPI PHP 2025 là dữ liệu doanh nghiệp, không đại diện toàn bộ ngành cảng Việt Nam.",
-      "Một số số liệu doanh nghiệp có thể khác nhau giữa thông cáo nhanh và BCTC kiểm toán; khi xung đột, pipeline sau sẽ ưu tiên BCTC/BC thường niên và lưu provenance.",
-      "Company → terminal mapping ngoài PHP là seed để xây UI; cần xác minh ownership/operating rights trước khi dùng cho định giá."
+    regionCoverage,
+    limitations:[
+      "Tổng quan V8.14 không hiển thị KPI riêng PHP và không lặp stock-watchlist; dữ liệu doanh nghiệp nằm ở Company layer.",
+      "DIRECT_PORT, MULTI_PORT_LOGISTICS, HOLDING_PORT_NETWORK và RELATED_PORT_SHIPPING là các nhóm khác nhau; không dùng universe này như một peer set định giá tự động.",
+      "Chỉ Hải Phòng hiện có production ship-plan collector. Các khu vực khác chỉ hiển thị source coverage cho đến khi collector được kiểm chứng.",
+      "DWT là proxy quy mô tàu, không phải actual cargo/TEU. Actual, estimate và target phải giữ nhãn riêng.",
+      "Universe là danh sách đã xác minh theo nguồn chính thức/issuer tại thời điểm as-of; sẽ tiếp tục mở rộng khi tìm thấy mã phù hợp và xác minh hoạt động cảng trực tiếp."
     ],
-    serverTime: new Date().toISOString()
+    serverTime:new Date().toISOString()
   };
 }
 

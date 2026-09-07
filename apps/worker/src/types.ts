@@ -151,13 +151,21 @@ export type PortMetric = {
   note?: string;
 };
 
+export type PortCompanyClass = "DIRECT_PORT" | "MULTI_PORT_LOGISTICS" | "HOLDING_PORT_NETWORK" | "RELATED_PORT_SHIPPING";
+
 export type PortCompany = {
   symbol: string;
   name: string;
+  exchange?: "HOSE" | "HNX" | "UPCOM";
   region: "Bắc" | "Trung" | "Nam";
+  locality?: string;
+  classification?: PortCompanyClass;
+  classificationLabel?: string;
   focus: string;
   terminals: string[];
   officialUrl?: string | null;
+  exchangeSourceUrl?: string | null;
+  verifiedAsOf?: string;
 };
 
 export type PortEvent = {
@@ -169,6 +177,15 @@ export type PortEvent = {
   note?: string;
 };
 
+export type PortRegionCoverage = {
+  id:string;
+  label:string;
+  macroRegion:"Bắc"|"Trung"|"Nam";
+  status:"live"|"source-found"|"research";
+  detail:string;
+  officialUrl?:string|null;
+};
+
 export type PortOverviewResponse = {
   industry: "PORTS";
   scope: string;
@@ -177,6 +194,7 @@ export type PortOverviewResponse = {
   companies: PortCompany[];
   events: PortEvent[];
   sources: PortSource[];
+  regionCoverage?: PortRegionCoverage[];
   limitations: string[];
   serverTime: string;
 };
