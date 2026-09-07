@@ -19,7 +19,9 @@ import {
   getPortSourcePreview,
   getTerminalAnalytics,
   ingestHaiphongOffsets,
-  trackedPortTerminals
+  trackedPortTerminals,
+  trackedPortCompanies,
+  getPortCompanyIntelligence
 } from "./providers/industry/portsHaiphong.js";
 import {
   addWatchlistSymbol,
@@ -308,6 +310,18 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
 
   if (url.pathname === "/api/industry/ports/terminals") {
     return json({ data: trackedPortTerminals, serverTime: new Date().toISOString() });
+  }
+
+  if (url.pathname === "/api/industry/ports/companies") {
+    return json({ data: trackedPortCompanies, serverTime: new Date().toISOString() });
+  }
+
+  if (url.pathname.startsWith("/api/industry/ports/company/")) {
+    const symbol = decodeURIComponent(url.pathname.split("/").pop() ?? "").toUpperCase();
+    const days = Math.min(Math.max(Number(url.searchParams.get("days") ?? 90), 7), 3650);
+    const months = Math.min(Math.max(Number(url.searchParams.get("months") ?? 24), 1), 120);
+    try { return json(await getPortCompanyIntelligence(env.DB, symbol, days, months)); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : String(error) }, 400); }
   }
 
   if (url.pathname.startsWith("/api/industry/ports/terminal/")) {

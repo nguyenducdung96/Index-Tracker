@@ -2366,3 +2366,6 @@ footer,
   .portShipTable > a strong { grid-column:1 / -1; font-size:11px; }
   .portShipTable > a span:nth-of-type(3), .portShipTable > a span:nth-of-type(5) { text-align:right; }
 }
+
+/* V8.10 Port Company Intelligence */
+.portCompanyPicker{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}.portYoyGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:12px}.portYoyGrid>div{border:1px solid var(--line);border-radius:10px;padding:9px;display:flex;flex-direction:column;gap:3px}.portYoyGrid span,.portYoyGrid em{font-size:12px}.portYoyGrid em{font-style:normal}.portYoyGrid .up{color:#22c55e}.portYoyGrid .down{color:#ef4444}.portYoyGrid .ref{color:#eab308}@media(max-width:700px){.portYoyGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.portCompanyPicker{width:100%}.portCompanyPicker select{width:100%}}

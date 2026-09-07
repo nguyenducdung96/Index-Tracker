@@ -153,3 +153,6 @@ export async function getTrackedPortTerminals() {
   if (!r.ok) throw new Error(`Port terminals HTTP ${r.status}`);
   return r.json();
 }
+
+export async function getPortCompanies() { const r=await fetch(`${BASE}/api/industry/ports/companies`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port companies HTTP ${r.status}`); return r.json(); }
+export async function getPortCompanyIntelligence(symbol:string,days=90,months=24) { const r=await fetch(`${BASE}/api/industry/ports/company/${encodeURIComponent(symbol)}?days=${days}&months=${months}`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port company HTTP ${r.status}`); return r.json(); }

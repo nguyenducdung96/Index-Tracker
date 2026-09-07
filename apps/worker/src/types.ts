@@ -290,3 +290,17 @@ export type PortHarborSummary = {
   };
   serverTime: string;
 };
+
+
+export type PortCompanyIntelligence = {
+  symbol: string;
+  name: string;
+  days: number;
+  terminals: Array<{ code:string; label:string; ownershipPct:number|null; ownershipNote:string; capacityTeu:number|null; capacityTons:number|null; officialUrl:string; sourceLabel:string; sourceUrl:string; sourceAsOf:string; }>;
+  summary: { dwt:number; shipCalls:number; avgDwt:number|null; maxDwt:number|null; terminalCount:number; capacityTeu:number|null; };
+  terminalStats: Array<{ terminal:string; terminalLabel:string; dwt:number; shipCalls:number; shareDwtPct:number; capacityTeu:number|null; ownershipPct:number|null; }>;
+  monthly: Array<{ month:string; dwt:number; shipCalls:number; previousYearDwt:number|null; yoyDwtPct:number|null; }>;
+  routes: Array<{ route:string; dwt:number; shipCalls:number; shareDwtPct:number; }>;
+  caveats:string[];
+  serverTime:string;
+};

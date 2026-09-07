@@ -6,7 +6,8 @@ import type {
   PortRouteStat,
   PortShipCall,
   PortTerminalAnalytics,
-  PortTerminalCapability
+  PortTerminalCapability,
+  PortCompanyIntelligence
 } from "../../types.js";
 
 const SOURCE_BASE = "https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx";
@@ -387,3 +388,35 @@ export async function getPortSourcePreview(offset:number) {
 }
 
 export const trackedPortTerminals = Object.keys(TERMINAL_LABELS).map(code=>({code,label:TERMINAL_LABELS[code]}));
+
+
+const COMPANY_INTELLIGENCE: Record<string, {name:string; terminals:Array<{code:string;ownershipPct:number|null;ownershipNote:string;capacityTeu:number|null;capacityTons:number|null;officialUrl:string;sourceLabel:string;sourceUrl:string;sourceAsOf:string}>}> = {
+  PHP: { name:"Công ty Cổ phần Cảng Hải Phòng", terminals:[
+    {code:"TAN_VU",ownershipPct:null,ownershipNote:"Đơn vị khai thác thuộc hệ thống Cảng Hải Phòng; V8.10 không suy tỷ lệ sở hữu khi nguồn chưa chuẩn hóa.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
+    {code:"CHUA_VE",ownershipPct:null,ownershipNote:"Đơn vị khai thác thuộc hệ thống Cảng Hải Phòng; không gán tỷ lệ giả định.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
+    {code:"HOANG_DIEU",ownershipPct:null,ownershipNote:"Theo dõi hoạt động trong hệ thống PHP; cần lưu ý thay đổi phạm vi khai thác theo thời gian.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
+    {code:"HTIT",ownershipPct:null,ownershipNote:"Liên doanh/đơn vị liên quan PHP; tỷ lệ sở hữu không hard-code trong V8.10 nếu chưa được registry hóa theo effective date.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"}
+  ]},
+  GMD: { name:"Công ty Cổ phần Gemadept", terminals:[
+    {code:"NAM_DINH_VU",ownershipPct:null,ownershipNote:"Cụm cảng Nam Đình Vũ thuộc hệ sinh thái cảng Gemadept; V8.10 không suy tỷ lệ sở hữu kinh tế từ tên thương mại.",capacityTeu:2000000,capacityTons:3000000,officialUrl:"https://ndv.gemadept.com.vn/",sourceLabel:"Gemadept – Cụm cảng Nam Đình Vũ",sourceUrl:"https://www.gemadept.com.vn/cum-cang-nam-dinh-vu/",sourceAsOf:"2026-09-08"}
+  ]}
+};
+
+export const trackedPortCompanies = Object.entries(COMPANY_INTELLIGENCE).map(([symbol,x])=>({symbol,name:x.name}));
+
+export async function getPortCompanyIntelligence(db:D1Database, symbol:string, days=90, months=24): Promise<PortCompanyIntelligence> {
+  await ensurePortSchema(db);
+  const code=symbol.toUpperCase(); const cfg=COMPANY_INTELLIGENCE[code];
+  if(!cfg) throw new Error(`Unknown/unsupported port company: ${symbol}`);
+  const terminals=cfg.terminals.map(x=>x.code); const placeholders=terminals.map(()=>'?').join(',');
+  const since=sinceDate(days); const monthSince=new Date(); monthSince.setMonth(monthSince.getMonth()-Math.max(months+12,24)); const monthSinceText=monthSince.toISOString().slice(0,7)+'-01';
+  const terminalStats=await db.prepare(`SELECT to_terminal terminal,COALESCE(SUM(dwt),0) dwt,COUNT(*) ship_calls FROM port_ship_movements WHERE movement_type='ARRIVAL' AND to_terminal IN (${placeholders}) AND plan_date>=? GROUP BY to_terminal ORDER BY dwt DESC`).bind(...terminals,since).all<any>();
+  const rows=(terminalStats.results??[]); const totalDwt=rows.reduce((a:any,x:any)=>a+num(x.dwt),0); const totalCalls=rows.reduce((a:any,x:any)=>a+num(x.ship_calls),0);
+  const overall=await db.prepare(`SELECT AVG(dwt) avg_dwt,MAX(dwt) max_dwt FROM port_ship_movements WHERE movement_type='ARRIVAL' AND to_terminal IN (${placeholders}) AND plan_date>=?`).bind(...terminals,since).first<any>();
+  const monthlyRaw=await db.prepare(`SELECT substr(plan_date,1,7) month,COALESCE(SUM(dwt),0) dwt,COUNT(*) ship_calls FROM port_ship_movements WHERE movement_type='ARRIVAL' AND to_terminal IN (${placeholders}) AND plan_date>=? GROUP BY substr(plan_date,1,7) ORDER BY month`).bind(...terminals,monthSinceText).all<any>();
+  const mm=new Map<string,{dwt:number;shipCalls:number}>((monthlyRaw.results??[]).map((x:any)=>[String(x.month),{dwt:num(x.dwt),shipCalls:num(x.ship_calls)}]));
+  const recent=[...mm.keys()].sort().slice(-months); const monthly=recent.map(month=>{const cur:any=mm.get(month); const [y,m]=month.split('-'); const prev:any=mm.get(`${Number(y)-1}-${m}`); return {month,dwt:cur.dwt,shipCalls:cur.shipCalls,previousYearDwt:prev?.dwt??null,yoyDwtPct:prev?.dwt>0?(cur.dwt/prev.dwt-1)*100:null};});
+  const routeRaw=await db.prepare(`SELECT from_raw route,COALESCE(SUM(dwt),0) dwt,COUNT(*) ship_calls FROM port_ship_movements WHERE movement_type='ARRIVAL' AND to_terminal IN (${placeholders}) AND plan_date>=? GROUP BY from_raw ORDER BY dwt DESC LIMIT 12`).bind(...terminals,since).all<any>();
+  const capacityTeu=cfg.terminals.every(x=>x.capacityTeu!=null)?cfg.terminals.reduce((a,x)=>a+(x.capacityTeu??0),0):cfg.terminals.some(x=>x.capacityTeu!=null)?cfg.terminals.reduce((a,x)=>a+(x.capacityTeu??0),0):null;
+  return {symbol:code,name:cfg.name,days,terminals:cfg.terminals.map(x=>({...x,label:TERMINAL_LABELS[x.code]??x.code})),summary:{dwt:totalDwt,shipCalls:totalCalls,avgDwt:nullableNum(overall?.avg_dwt),maxDwt:nullableNum(overall?.max_dwt),terminalCount:terminals.length,capacityTeu},terminalStats:rows.map((x:any)=>{const c=cfg.terminals.find(t=>t.code===x.terminal);return{terminal:x.terminal,terminalLabel:TERMINAL_LABELS[x.terminal]??x.terminal,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0,capacityTeu:c?.capacityTeu??null,ownershipPct:c?.ownershipPct??null}}),monthly,routes:(routeRaw.results??[]).map((x:any)=>({route:x.route,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0})),caveats:["DWT là proxy quy mô tàu, không phải TEU hay sản lượng hàng thực tế.","Ship-call dùng ARRIVAL convention từ kế hoạch điều động; chưa mặc định là actual realized call.","Company aggregation chỉ gồm terminal đã được registry; không tự suy terminal chưa xác minh.","Ownership % để null khi chưa có nguồn/effective-date registry đủ chắc chắn."],serverTime:new Date().toISOString()};
+}
