@@ -180,3 +180,113 @@ export type PortOverviewResponse = {
   limitations: string[];
   serverTime: string;
 };
+
+
+export type PortShipCall = {
+  planDate: string;
+  eventTime: string | null;
+  vesselName: string;
+  draft: number | null;
+  loa: number | null;
+  dwt: number | null;
+  gt: number | null;
+  fromRaw: string;
+  toRaw: string;
+  terminal: string | null;
+  agent: string | null;
+  channel: string | null;
+  sourceUrl: string;
+  sourceType: "PORT_AUTHORITY_MOVEMENT_PLAN";
+};
+
+export type PortDailyStat = {
+  date: string;
+  dwt: number;
+  shipCalls: number;
+  avgDwt: number | null;
+  maxDwt: number | null;
+};
+
+export type PortMonthlyStat = {
+  month: string;
+  dwt: number;
+  shipCalls: number;
+  avgDwt: number | null;
+  maxDwt: number | null;
+};
+
+export type PortRouteStat = {
+  route: string;
+  dwt: number;
+  shipCalls: number;
+};
+
+export type PortTerminalCapability = {
+  terminal: string;
+  label: string;
+  maxDwt: number | null;
+  note: string;
+  sourceUrl: string;
+  asOf: string;
+};
+
+export type PortTerminalAnalytics = {
+  terminal: string;
+  terminalLabel: string;
+  days: number;
+  summary: {
+    dwt: number;
+    shipCalls: number;
+    avgDwt: number | null;
+    maxDwt: number | null;
+    lastPlanDate: string | null;
+  };
+  daily: PortDailyStat[];
+  monthly: PortMonthlyStat[];
+  routes: PortRouteStat[];
+  recentCalls: PortShipCall[];
+  capability: PortTerminalCapability | null;
+  source: {
+    label: string;
+    url: string;
+    sourceType: "PORT_AUTHORITY_MOVEMENT_PLAN";
+    dataStatus: "planned-movement";
+  };
+  ingestion: {
+    lastOkAt: string | null;
+    lastError: string | null;
+    storedRows: number;
+  };
+  serverTime: string;
+};
+
+export type PortHarborSummary = {
+  scope: "HAIPHONG";
+  days: number;
+  summary: {
+    dwt: number;
+    shipCalls: number;
+    avgDwt: number | null;
+    maxDwt: number | null;
+    lastPlanDate: string | null;
+  };
+  topTerminals: Array<{
+    terminal: string;
+    terminalLabel: string;
+    dwt: number;
+    shipCalls: number;
+  }>;
+  daily: PortDailyStat[];
+  ingestion: {
+    lastOkAt: string | null;
+    lastError: string | null;
+    storedRows: number;
+  };
+  source: {
+    label: string;
+    url: string;
+    sourceType: "PORT_AUTHORITY_MOVEMENT_PLAN";
+    dataStatus: "planned-movement";
+  };
+  serverTime: string;
+};

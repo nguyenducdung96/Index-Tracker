@@ -39,8 +39,8 @@ const sources: PortSource[] = [
     sourceKind: "official",
     updateCadence: "Theo công bố",
     coverage: "quản lý cảng biển, văn bản, dữ liệu hàng hải công khai",
-    status: "manual",
-    note: "Chưa xác nhận API public ổn định cho ship-call/DWT."
+    status: "tracked",
+    note: "V8.9 dùng CSDL kế hoạch điều động tàu Hải Phòng làm official ship-plan feed; dữ liệu được gắn planned-movement."
   },
   {
     id: "port-price",

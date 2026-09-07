@@ -134,3 +134,22 @@ export async function getPortSources() {
   if (!r.ok) throw new Error(`Port sources HTTP ${r.status}`);
   return r.json();
 }
+
+
+export async function getPortHaiphongSummary(days = 30) {
+  const r = await fetch(`${BASE}/api/industry/ports/haiphong/summary?days=${days}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Hai Phong port summary HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getPortTerminalAnalytics(terminal: string, days = 90, months = 24) {
+  const r = await fetch(`${BASE}/api/industry/ports/terminal/${encodeURIComponent(terminal)}?days=${days}&months=${months}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Port terminal HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getTrackedPortTerminals() {
+  const r = await fetch(`${BASE}/api/industry/ports/terminals`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`Port terminals HTTP ${r.status}`);
+  return r.json();
+}

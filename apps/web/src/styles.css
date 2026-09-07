@@ -2332,3 +2332,37 @@ footer,
   .portEntityPrice strong { font-size:23px; }
   .portSourceList > a { padding-right:75px; }
 }
+
+
+/* ==========================================================
+   V8.9 — HAI PHONG PORT INTELLIGENCE
+   ========================================================== */
+.portChartBox { color:#35d8c7; width:100%; min-height:270px; }
+.portChartBox .recharts-cartesian-grid line { stroke:#17344c; }
+.portChartBox .recharts-text { fill:#6f8fa9; font-size:9px; }
+.portChartBar { color:#35d8c7; }
+.portEmpty { min-height:160px; display:grid; place-items:center; color:#7895ad; border:1px dashed #27465e; border-radius:10px; font-size:10px; text-align:center; padding:18px; }
+.portRankList { display:grid; gap:0; }
+.portRankList > div { display:grid; grid-template-columns:minmax(0,1fr) 110px 80px; gap:10px; align-items:center; padding:9px 0; border-top:1px solid #173148; }
+.portRankList > div:first-child { border-top:0; }
+.portRankList span { font-size:10px; }
+.portRankList b { color:#35d8c7; text-align:right; font-size:10px; }
+.portRankList em { color:#708da6; font-style:normal; text-align:right; font-size:8px; }
+.portTerminalSelect { min-width:220px; border:1px solid #2b526e; border-radius:9px; background:#0b2032; color:#dce9f4; padding:8px 10px; font-size:10px; }
+.portShipTable { overflow:hidden; border:1px solid #1b3850; border-radius:11px; }
+.portShipTable .head, .portShipTable > a { display:grid; grid-template-columns:100px minmax(150px,1.3fr) 80px 70px minmax(100px,.8fr) minmax(160px,1.4fr); gap:8px; align-items:center; padding:8px 10px; }
+.portShipTable .head { background:#0c2133; color:#6888a5; font-size:8px; text-transform:uppercase; }
+.portShipTable > a { color:#cbdbe8; text-decoration:none; border-top:1px solid #163149; font-size:9px; }
+.portShipTable > a:hover { background:#0b2031; }
+.portShipTable > a strong { color:#e7f0f7; font-size:9px; }
+.portShipTable small { display:block; color:#6d8aa4; font-size:7px; margin-top:2px; }
+.portScopeNotice a { color:#55cfff; text-decoration:none; }
+@media (max-width:760px){
+  .portTerminalSelect { width:100%; min-width:0; }
+  .portRankList > div { grid-template-columns:minmax(0,1fr) 85px 58px; gap:6px; }
+  .portShipTable { border:0; overflow:visible; display:grid; gap:7px; }
+  .portShipTable .head { display:none; }
+  .portShipTable > a { border:1px solid #1b3850; border-radius:10px; background:#091b2a; display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; padding:9px; }
+  .portShipTable > a strong { grid-column:1 / -1; font-size:11px; }
+  .portShipTable > a span:nth-of-type(3), .portShipTable > a span:nth-of-type(5) { text-align:right; }
+}

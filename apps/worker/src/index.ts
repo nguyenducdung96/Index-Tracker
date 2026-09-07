@@ -13,6 +13,15 @@ import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from 
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import { getPortOverview, getPortSources } from "./providers/industry/ports.js";
 import {
+  backfillHaiphongChunk,
+  bootstrapHaiphongIfNeeded,
+  getHaiphongSummary,
+  getPortSourcePreview,
+  getTerminalAnalytics,
+  ingestHaiphongOffsets,
+  trackedPortTerminals
+} from "./providers/industry/portsHaiphong.js";
+import {
   addWatchlistSymbol,
   createWatchlist,
   deleteWatchlist,
@@ -36,6 +45,7 @@ interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   GOLD_API_KEY?: string;
+  PORT_ADMIN_TOKEN?: string;
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
@@ -273,7 +283,53 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
     return json({ error: "Method not allowed" }, 405);
   }
 
+  if (url.pathname === "/api/admin/ports/backfill" && request.method === "POST") {
+    if (!env.PORT_ADMIN_TOKEN) return json({ error: "PORT_ADMIN_TOKEN is not configured" }, 503);
+    const auth = request.headers.get("authorization") ?? "";
+    if (auth !== `Bearer ${env.PORT_ADMIN_TOKEN}`) return json({ error: "Unauthorized" }, 401);
+    const body = await request.json<any>().catch(() => ({}));
+    const startOffset = Math.min(Math.max(Number(body?.startOffset ?? -14), -3650), 0);
+    const days = Math.min(Math.max(Number(body?.days ?? 14), 1), 31);
+    const offsets = Array.from({ length: days }, (_, i) => startOffset - i);
+    try { return json(await ingestHaiphongOffsets(env.DB, offsets)); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : String(error) }, 502); }
+  }
+
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  if (url.pathname === "/api/industry/ports/haiphong/summary") {
+    const days = Math.min(Math.max(Number(url.searchParams.get("days") ?? 30), 1), 365);
+    const result = await getHaiphongSummary(env.DB, days);
+    if (result.ingestion.storedRows === 0) {
+      ctx.waitUntil(bootstrapHaiphongIfNeeded(env.DB).catch(console.error));
+    }
+    return json(result);
+  }
+
+  if (url.pathname === "/api/industry/ports/terminals") {
+    return json({ data: trackedPortTerminals, serverTime: new Date().toISOString() });
+  }
+
+  if (url.pathname.startsWith("/api/industry/ports/terminal/")) {
+    const terminal = decodeURIComponent(url.pathname.split("/").pop() ?? "").toUpperCase();
+    const days = Math.min(Math.max(Number(url.searchParams.get("days") ?? 90), 7), 3650);
+    const months = Math.min(Math.max(Number(url.searchParams.get("months") ?? 24), 1), 120);
+    try {
+      const result = await getTerminalAnalytics(env.DB, terminal, days, months);
+      if (result.ingestion.storedRows === 0) {
+        ctx.waitUntil(bootstrapHaiphongIfNeeded(env.DB).catch(console.error));
+      }
+      return json(result);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    }
+  }
+
+  if (url.pathname === "/api/industry/ports/source-preview") {
+    const offset = Math.min(Math.max(Number(url.searchParams.get("offset") ?? 0), -3650), 1);
+    try { return json(await getPortSourcePreview(offset)); }
+    catch (error) { return json({ error: error instanceof Error ? error.message : String(error) }, 502); }
+  }
 
   if (url.pathname === "/api/industry/ports/overview") {
     return json(getPortOverview());
@@ -553,6 +609,20 @@ export default {
       return;
     }
 
+    if (cron === "23 */4 * * *") {
+      ctx.waitUntil((async () => {
+        try {
+          await bootstrapHaiphongIfNeeded(env.DB);
+          await ingestHaiphongOffsets(env.DB, [0,-1,-2,-3]);
+          await logCron(env.DB, "ports-haiphong", true);
+        } catch (e) {
+          await logCron(env.DB, "ports-haiphong", false, e instanceof Error ? e.message : String(e));
+          throw e;
+        }
+      })());
+      return;
+    }
+
     if (cron === "17 * * * *") {
       ctx.waitUntil((async () => {
         try {
@@ -570,6 +640,8 @@ export default {
       ctx.waitUntil((async () => {
         try {
           await cleanup(env.DB);
+          try { await backfillHaiphongChunk(env.DB, 14); }
+          catch (e) { console.error("Port history backfill chunk failed", e); }
           await logCron(env.DB, "cleanup", true);
         } catch (e) {
           await logCron(env.DB, "cleanup", false, e instanceof Error ? e.message : String(e));

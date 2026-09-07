@@ -1,397 +1,95 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPortOverview, getStockQuotes } from "../../api";
-import type { PortCompany, PortMetric, PortOverviewResponse, StockQuote } from "../../types";
+import {
+  Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis
+} from "recharts";
+import {
+  getPortHaiphongSummary,
+  getPortOverview,
+  getPortTerminalAnalytics,
+  getStockQuotes,
+  getTrackedPortTerminals
+} from "../../api";
+import type {
+  PortCompany, PortHarborSummary, PortMetric, PortOverviewResponse,
+  PortTerminalAnalytics, StockQuote
+} from "../../types";
 import { ResponsiveTabBar } from "../ResponsiveTabBar";
 
-type PortView = "overview" | "php" | "htit" | "sources";
+type PortView = "overview" | "haiphong" | "php" | "terminal" | "sources";
 
-function fmt(v: number | null | undefined, digits = 1) {
-  if (v == null) return "—";
-  return v.toLocaleString("vi-VN", { maximumFractionDigits: digits });
+function fmt(v:number|null|undefined,digits=1){ return v==null?"—":v.toLocaleString("vi-VN",{maximumFractionDigits:digits}); }
+function fmtCompact(v:number|null|undefined){ if(v==null)return"—"; if(v>=1e9)return`${(v/1e9).toFixed(2)}B`; if(v>=1e6)return`${(v/1e6).toFixed(2)}M`; if(v>=1e3)return`${(v/1e3).toFixed(1)}K`; return fmt(v,0); }
+function stockClass(v:number|null|undefined){ if(v==null||v===0)return"ref"; return v>0?"up":"down"; }
+function metricMap(rows:PortMetric[]){ return new Map(rows.map(x=>[x.id,x])); }
+
+function SourceChip({sourceId,data}:{sourceId:string;data:PortOverviewResponse}){
+  const src=data.sources.find(x=>x.id===sourceId); if(!src)return null;
+  return <a className="portSourceChip" href={src.url} target="_blank" rel="noreferrer">{src.sourceKind==="official"?"Nguồn Nhà nước ↗":"Nguồn DN ↗"}</a>;
 }
 
-function stockClass(v: number | null | undefined) {
-  if (v == null || v === 0) return "ref";
-  return v > 0 ? "up" : "down";
+function StockStrip({quotes}:{quotes:StockQuote[]}){
+  return <div className="portStockGrid">{quotes.map(q=><a key={q.code} href={`https://web.fireant.vn/ma-chung-khoan/${q.code}`} target="_blank" rel="noreferrer" className="portStockCard">
+    <div><strong className={stockClass(q.changePercent)}>{q.code}</strong><small>{q.floor}</small></div>
+    <div className="portStockPrice"><b className={stockClass(q.changePercent)}>{q.matchPrice==null?"—":q.matchPrice.toLocaleString("vi-VN")}</b><span className={stockClass(q.changePercent)}>{q.changePercent==null?"—":`${q.changePercent>0?"+":""}${q.changePercent.toFixed(2)}%`}</span></div>
+    <div className="portStockVol"><span>VOL {q.accumulatedVol==null?"—":`${(q.accumulatedVol/1e6).toFixed(1)}M`}</span><span>AVG {q.volumeVsAvg20==null?"—":`${q.volumeVsAvg20.toFixed(2)}x`}</span></div>
+  </a>)}</div>;
 }
 
-function metricMap(rows: PortMetric[]) {
-  return new Map(rows.map(x => [x.id, x]));
+function MiniDailyChart({rows}:{rows:Array<{date:string;dwt:number}>}){
+  if(!rows.length)return <div className="portEmpty">Chưa có dữ liệu D1. Collector sẽ bootstrap sau lần chạy đầu tiên.</div>;
+  return <div className="portChartBox"><ResponsiveContainer width="100%" height={270}><BarChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="date" tickFormatter={x=>String(x).slice(5)} minTickGap={18}/><YAxis tickFormatter={x=>fmtCompact(Number(x))}/><Tooltip formatter={(v:any)=>[Number(v).toLocaleString("vi-VN"),"DWT"]}/><Bar dataKey="dwt" fill="currentColor" className="portChartBar" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div>;
 }
 
-function SourceChip({ sourceId, data }: { sourceId: string; data: PortOverviewResponse }) {
-  const src = data.sources.find(x => x.id === sourceId);
-  if (!src) return null;
-  return (
-    <a className="portSourceChip" href={src.url} target="_blank" rel="noreferrer">
-      {src.sourceKind === "official" ? "Nguồn Nhà nước ↗" : "Nguồn DN ↗"}
-    </a>
-  );
+function Overview({data,quotes,onPHP,onHarbor,onTerminal}:{data:PortOverviewResponse;quotes:StockQuote[];onPHP:()=>void;onHarbor:()=>void;onTerminal:()=>void}){
+  const m=metricMap(data.metrics); const cards=[m.get("php-throughput-2025"),m.get("php-teu-2025"),m.get("php-revenue-2025"),m.get("php-pbt-2025")].filter(Boolean) as PortMetric[];
+  return <>
+    <section className="portHero portPanel"><div><span className="portEyebrow">INDUSTRY ENGINE · PORTS · V8.9</span><h2>Cảng biển Việt Nam</h2><p>V8.9 nối nguồn kế hoạch điều động tàu chính thức của Cảng vụ Hàng hải Hải Phòng vào D1. DWT được dùng như proxy quy mô tàu, không phải sản lượng hàng thực tế.</p></div><div className="portHeroActions"><button onClick={onHarbor}>Hải Phòng live</button><button onClick={onPHP}>PHP</button><button onClick={onTerminal}>Terminal</button></div></section>
+    <div className="portScopeNotice"><strong>Data policy:</strong> ship-call dùng <b>tàu vào cảng</b> làm convention chính để tránh cộng đôi arrival + departure. Nguồn được gắn trạng thái <b>planned-movement</b>.</div>
+    <div className="portKpiGrid">{cards.map(x=><article className="portKpiCard" key={x.id}><span>{x.label}</span><strong>{fmt(x.value)} <em>{x.unit}</em></strong><small>{x.period}{x.yoyPct!=null?` · ${x.yoyPct>0?"+":""}${x.yoyPct.toFixed(1)}% YoY`:""}</small><SourceChip sourceId={x.sourceId} data={data}/></article>)}</div>
+    <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Cổ phiếu cảng theo dõi</h3></div><span className="portMuted">VNDIRECT Stock Engine</span></div><StockStrip quotes={quotes}/></section>
+    <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Company → Terminal map</h3></div></div><div className="portCompanyGrid">{data.companies.map((c:PortCompany)=><article key={c.symbol} className="portCompanyCard"><div className="portCompanyTitle"><strong>{c.symbol}</strong><span>{c.region}</span></div><h4>{c.name}</h4><p>{c.focus}</p><div className="portTerminalTags">{c.terminals.map(t=><span key={t}>{t}</span>)}</div>{c.officialUrl&&<a href={c.officialUrl} target="_blank" rel="noreferrer">Trang chính thức ↗</a>}</article>)}</div></section>
+  </>;
 }
 
-function StockStrip({ quotes }: { quotes: StockQuote[] }) {
-  return (
-    <div className="portStockGrid">
-      {quotes.map(q => (
-        <a
-          key={q.code}
-          href={`https://web.fireant.vn/ma-chung-khoan/${q.code}`}
-          target="_blank"
-          rel="noreferrer"
-          className="portStockCard"
-        >
-          <div>
-            <strong className={stockClass(q.changePercent)}>{q.code}</strong>
-            <small>{q.floor}</small>
-          </div>
-          <div className="portStockPrice">
-            <b className={stockClass(q.changePercent)}>
-              {q.matchPrice == null ? "—" : q.matchPrice.toLocaleString("vi-VN")}
-            </b>
-            <span className={stockClass(q.changePercent)}>
-              {q.changePercent == null ? "—" : `${q.changePercent > 0 ? "+" : ""}${q.changePercent.toFixed(2)}%`}
-            </span>
-          </div>
-          <div className="portStockVol">
-            <span>VOL {q.accumulatedVol == null ? "—" : `${(q.accumulatedVol / 1_000_000).toFixed(1)}M`}</span>
-            <span>AVG {q.volumeVsAvg20 == null ? "—" : `${q.volumeVsAvg20.toFixed(2)}x`}</span>
-          </div>
-        </a>
-      ))}
-    </div>
-  );
+function HarborDashboard({data}:{data:PortHarborSummary|null}){
+  if(!data)return <div className="portPanel">Đang tải dữ liệu Hải Phòng…</div>;
+  return <>
+    <section className="portPanel portEntityHero"><div><span className="portEyebrow">CẢNG VỤ HÀNG HẢI HẢI PHÒNG</span><h2>Hải Phòng · Ship-plan Intelligence</h2><p>Aggregate từ các record <b>tàu vào cảng</b> có terminal được normalize. Đây là kế hoạch điều động chính thức, chưa mặc định là actual realized call.</p></div><a className="companyHomepageButton" href={data.source.url} target="_blank" rel="noreferrer">Nguồn chính thức ↗</a></section>
+    <div className="portKpiGrid"><article className="portKpiCard"><span>DWT · {data.days} ngày</span><strong>{fmtCompact(data.summary.dwt)}</strong><small>trọng tải thiết kế tàu</small></article><article className="portKpiCard"><span>Ship calls</span><strong>{fmt(data.summary.shipCalls,0)}</strong><small>arrival convention</small></article><article className="portKpiCard"><span>Avg DWT</span><strong>{fmtCompact(data.summary.avgDwt)}</strong><small>mỗi ship call</small></article><article className="portKpiCard"><span>Largest vessel</span><strong>{fmtCompact(data.summary.maxDwt)}</strong><small>DWT</small></article></div>
+    <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>DWT theo ngày</h3></div><span className="portMuted">Cập nhật: {data.ingestion.lastOkAt?new Date(data.ingestion.lastOkAt).toLocaleString("vi-VN"):"chờ collector"}</span></div><MiniDailyChart rows={data.daily}/></section>
+    <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Top terminal theo DWT</h3></div></div><div className="portRankList">{data.topTerminals.map((x,i)=><div key={x.terminal}><span>{i+1}. {x.terminalLabel}</span><b>{fmtCompact(x.dwt)}</b><em>{x.shipCalls} calls</em></div>)}</div></section>
+    {data.ingestion.lastError&&<div className="portScopeNotice"><strong>Collector error:</strong> {data.ingestion.lastError}</div>}
+  </>;
 }
 
-function Overview({ data, quotes, onOpenPHP, onOpenHTIT }: {
-  data: PortOverviewResponse;
-  quotes: StockQuote[];
-  onOpenPHP: () => void;
-  onOpenHTIT: () => void;
-}) {
-  const m = metricMap(data.metrics);
-  const throughput = m.get("php-throughput-2025");
-  const teu = m.get("php-teu-2025");
-  const revenue = m.get("php-revenue-2025");
-  const pbt = m.get("php-pbt-2025");
-
-  return (
-    <>
-      <section className="portHero portPanel">
-        <div>
-          <span className="portEyebrow">INDUSTRY ENGINE · PORTS</span>
-          <h2>Cảng biển Việt Nam</h2>
-          <p>
-            V8.8 khởi động với cụm Hải Phòng/PHP. Dữ liệu vận hành ưu tiên nguồn chính thức;
-            DWT tàu theo ngày chưa đưa vào production cho đến khi có feed công khai ổn định.
-          </p>
-        </div>
-        <div className="portHeroActions">
-          <button onClick={onOpenPHP}>PHP dashboard</button>
-          <button onClick={onOpenHTIT}>HTIT terminal</button>
-        </div>
-      </section>
-
-      <div className="portScopeNotice">
-        <strong>Phạm vi MVP:</strong> KPI bên dưới là snapshot chính thức của <b>CTCP Cảng Hải Phòng (PHP)</b>,
-        chưa đại diện toàn bộ ngành cảng Việt Nam.
-      </div>
-
-      <div className="portKpiGrid">
-        {[throughput, teu, revenue, pbt].filter(Boolean).map(x => (
-          <article className="portKpiCard" key={x!.id}>
-            <span>{x!.label}</span>
-            <strong>{fmt(x!.value)} <em>{x!.unit}</em></strong>
-            <small>{x!.period}{x!.yoyPct != null ? ` · ${x!.yoyPct > 0 ? "+" : ""}${x!.yoyPct.toFixed(1)}% YoY` : ""}</small>
-            <SourceChip sourceId={x!.sourceId} data={data} />
-          </article>
-        ))}
-      </div>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div>
-            <span className="portSectionIndex">01</span>
-            <h3>Cổ phiếu cảng theo dõi</h3>
-          </div>
-          <span className="portMuted">Giá realtime từ Stock Engine hiện tại</span>
-        </div>
-        <StockStrip quotes={quotes} />
-      </section>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div>
-            <span className="portSectionIndex">02</span>
-            <h3>Company → Terminal map</h3>
-          </div>
-        </div>
-        <div className="portCompanyGrid">
-          {data.companies.map((c: PortCompany) => (
-            <article key={c.symbol} className="portCompanyCard">
-              <div className="portCompanyTitle">
-                <strong>{c.symbol}</strong>
-                <span>{c.region}</span>
-              </div>
-              <h4>{c.name}</h4>
-              <p>{c.focus}</p>
-              <div className="portTerminalTags">
-                {c.terminals.map(t => <span key={t}>{t}</span>)}
-              </div>
-              {c.officialUrl && <a href={c.officialUrl} target="_blank" rel="noreferrer">Trang chính thức ↗</a>}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div>
-            <span className="portSectionIndex">03</span>
-            <h3>Event timeline</h3>
-          </div>
-          <span className="portMuted">Chỉ đưa event có nguồn truy vết</span>
-        </div>
-        <div className="portTimeline">
-          {data.events.map(e => {
-            const src = data.sources.find(x => x.id === e.sourceId);
-            return (
-              <article key={`${e.date}-${e.title}`}>
-                <time>{e.date}</time>
-                <div>
-                  <strong>{e.title}</strong>
-                  <span>{e.entity} · {e.kind}</span>
-                  {e.note && <p>{e.note}</p>}
-                </div>
-                {src && <a href={src.url} target="_blank" rel="noreferrer">Nguồn ↗</a>}
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="portPanel portLimitPanel">
-        <div className="portSectionHead">
-          <div>
-            <span className="portSectionIndex">!</span>
-            <h3>Data-quality guardrails</h3>
-          </div>
-        </div>
-        <ul>
-          {data.limitations.map(x => <li key={x}>{x}</li>)}
-        </ul>
-      </section>
-    </>
-  );
+function TerminalDashboard({terminal,setTerminal,terminalOptions,data}:{terminal:string;setTerminal:(v:string)=>void;terminalOptions:Array<{code:string;label:string}>;data:PortTerminalAnalytics|null}){
+  return <>
+    <section className="portPanel portEntityHero"><div><span className="portEyebrow">TERMINAL INTELLIGENCE · OFFICIAL SHIP PLAN</span><h2>{data?.terminalLabel ?? terminal}</h2><p>DWT, ship calls, route origin và vessel list lấy từ CSDL kế hoạch điều động tàu Cảng vụ Hải Phòng. Arrival là record chính để chống double-count.</p></div><select className="portTerminalSelect" value={terminal} onChange={e=>setTerminal(e.target.value)}>{terminalOptions.map(x=><option key={x.code} value={x.code}>{x.label}</option>)}</select></section>
+    {!data?<div className="portPanel">Đang tải terminal…</div>:<>
+      <div className="portKpiGrid"><article className="portKpiCard"><span>DWT · {data.days} ngày</span><strong>{fmtCompact(data.summary.dwt)}</strong><small>proxy quy mô tàu</small></article><article className="portKpiCard"><span>Ship calls</span><strong>{fmt(data.summary.shipCalls,0)}</strong><small>arrival records</small></article><article className="portKpiCard"><span>Avg DWT</span><strong>{fmtCompact(data.summary.avgDwt)}</strong><small>mỗi call</small></article><article className="portKpiCard"><span>Largest vessel</span><strong>{fmtCompact(data.summary.maxDwt)}</strong><small>{data.capability?`capability ~${fmtCompact(data.capability.maxDwt)}`:"DWT"}</small></article></div>
+      {data.capability&&<div className="portScopeNotice"><strong>Khả năng tiếp nhận:</strong> {data.capability.note} <a href={data.capability.sourceUrl} target="_blank" rel="noreferrer">Nguồn Cảng vụ ↗</a></div>}
+      <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>DWT theo ngày</h3></div></div><MiniDailyChart rows={data.daily}/></section>
+      <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>DWT theo tháng</h3></div><span className="portMuted">YoY chỉ có ý nghĩa sau khi backfill đủ lịch sử</span></div><div className="portChartBox"><ResponsiveContainer width="100%" height={270}><BarChart data={data.monthly}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="month"/><YAxis tickFormatter={x=>fmtCompact(Number(x))}/><Tooltip formatter={(v:any)=>[Number(v).toLocaleString("vi-VN"),"DWT"]}/><Bar dataKey="dwt" fill="currentColor" className="portChartBar" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div></section>
+      <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">03</span><h3>Top origin / route</h3></div></div><div className="portRankList">{data.routes.map((x,i)=><div key={x.route}><span>{i+1}. {x.route}</span><b>{fmtCompact(x.dwt)}</b><em>{x.shipCalls} calls</em></div>)}</div></section>
+      <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">04</span><h3>Recent ship calls</h3></div><span className="portMuted">Kế hoạch điều động · không phải manifest hàng hóa</span></div><div className="portShipTable"><div className="head"><span>Ngày</span><span>Tàu</span><span>DWT</span><span>LOA</span><span>Từ</span><span>Đại lý</span></div>{data.recentCalls.map((x,i)=><a href={x.sourceUrl} target="_blank" rel="noreferrer" key={`${x.planDate}-${x.vesselName}-${i}`}><span>{x.planDate}<small>{x.eventTime}</small></span><strong>{x.vesselName}</strong><span>{fmt(x.dwt,0)}</span><span>{fmt(x.loa,1)}</span><span>{x.fromRaw}</span><span>{x.agent??"—"}</span></a>)}</div></section>
+      <div className="portScopeNotice"><strong>Provenance:</strong> {data.source.label} · trạng thái <b>{data.source.dataStatus}</b> · {data.ingestion.storedRows.toLocaleString("vi-VN")} rows trong D1.</div>
+    </>}
+  </>;
 }
 
-function PHPDashboard({ data, quote }: { data: PortOverviewResponse; quote?: StockQuote }) {
-  const m = metricMap(data.metrics);
-  const cards = [
-    m.get("php-throughput-2025"),
-    m.get("php-teu-2025"),
-    m.get("php-revenue-2025"),
-    m.get("php-pbt-2025")
-  ].filter(Boolean) as PortMetric[];
-
-  return (
-    <>
-      <section className="portPanel portEntityHero">
-        <div>
-          <span className="portEyebrow">PHP · UPCOM</span>
-          <h2>Công ty Cổ phần Cảng Hải Phòng</h2>
-          <p>
-            Dashboard doanh nghiệp mẫu của Industry Engine: vận hành → tài chính → terminal → stock.
-          </p>
-        </div>
-        {quote && (
-          <div className="portEntityPrice">
-            <strong className={stockClass(quote.changePercent)}>
-              {quote.matchPrice == null ? "—" : quote.matchPrice.toLocaleString("vi-VN")}
-            </strong>
-            <span className={stockClass(quote.changePercent)}>
-              {quote.changePercent == null ? "—" : `${quote.changePercent > 0 ? "+" : ""}${quote.changePercent.toFixed(2)}%`}
-            </span>
-            <small>VOL/AVG {quote.volumeVsAvg20 == null ? "—" : `${quote.volumeVsAvg20.toFixed(2)}x`}</small>
-          </div>
-        )}
-      </section>
-
-      <div className="portKpiGrid">
-        {cards.map(x => (
-          <article className="portKpiCard" key={x.id}>
-            <span>{x.label}</span>
-            <strong>{fmt(x.value)} <em>{x.unit}</em></strong>
-            <small>{x.period}{x.yoyPct != null ? ` · ${x.yoyPct > 0 ? "+" : ""}${x.yoyPct.toFixed(1)}% YoY` : ""}</small>
-            <SourceChip sourceId={x.sourceId} data={data} />
-          </article>
-        ))}
-      </div>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div><span className="portSectionIndex">01</span><h3>Operating structure</h3></div>
-        </div>
-        <div className="portTerminalBoard">
-          <div><strong>Tân Vũ</strong><span>Terminal thường · PHP vận hành trực tiếp</span></div>
-          <div><strong>Chùa Vẽ</strong><span>Terminal thường · PHP</span></div>
-          <div><strong>Hoàng Diệu</strong><span>Cảng truyền thống · PHP</span></div>
-          <div className="hot"><strong>HTIT · Lạch Huyện 3–4</strong><span>Nước sâu · động lực tăng công suất mới</span></div>
-        </div>
-      </section>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div><span className="portSectionIndex">02</span><h3>Operating ↔ Financial</h3></div>
-          <span className="portMuted">Không dùng DWT × giá để suy doanh thu</span>
-        </div>
-        <div className="portRelationGrid">
-          <div><span>Hàng hóa thông qua 2025</span><strong>42,67 triệu tấn</strong></div>
-          <div><span>Container 2025</span><strong>2,07 triệu TEU</strong></div>
-          <div><span>Doanh thu 2025</span><strong>3.545 tỷ</strong></div>
-          <div><span>LNTT 2025</span><strong>1.280 tỷ</strong></div>
-        </div>
-        <p className="portFootnote">
-          Đây là các KPI công bố chính thức của doanh nghiệp. DWT/ship-call sẽ là lớp proxy vận hành riêng khi pipeline cảng vụ hoàn tất.
-        </p>
-      </section>
-    </>
-  );
+function PHPDashboard({data,quote}:{data:PortOverviewResponse;quote?:StockQuote}){
+  const m=metricMap(data.metrics); const cards=[m.get("php-throughput-2025"),m.get("php-teu-2025"),m.get("php-revenue-2025"),m.get("php-pbt-2025")].filter(Boolean) as PortMetric[];
+  return <><section className="portPanel portEntityHero"><div><span className="portEyebrow">PHP · UPCOM</span><h2>Công ty Cổ phần Cảng Hải Phòng</h2><p>Company layer: official business KPI + terminal intelligence + stock engine.</p></div>{quote&&<div className="portEntityPrice"><strong className={stockClass(quote.changePercent)}>{quote.matchPrice==null?"—":quote.matchPrice.toLocaleString("vi-VN")}</strong><span className={stockClass(quote.changePercent)}>{quote.changePercent==null?"—":`${quote.changePercent>0?"+":""}${quote.changePercent.toFixed(2)}%`}</span><small>VOL/AVG {quote.volumeVsAvg20==null?"—":`${quote.volumeVsAvg20.toFixed(2)}x`}</small></div>}</section><div className="portKpiGrid">{cards.map(x=><article className="portKpiCard" key={x.id}><span>{x.label}</span><strong>{fmt(x.value)} <em>{x.unit}</em></strong><small>{x.period}</small><SourceChip sourceId={x.sourceId} data={data}/></article>)}</div><section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Operating structure</h3></div></div><div className="portTerminalBoard"><div><strong>Tân Vũ</strong><span>PHP trực tiếp · live collector hỗ trợ</span></div><div><strong>Chùa Vẽ</strong><span>PHP · live collector hỗ trợ</span></div><div><strong>Hoàng Diệu</strong><span>PHP · mapping cần theo dõi phạm vi hoạt động</span></div><div className="hot"><strong>HTIT · Lạch Huyện 3–4</strong><span>Nước sâu · live collector hỗ trợ</span></div></div></section><section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Operating ↔ Financial</h3></div><span className="portMuted">DWT không dùng để suy doanh thu trực tiếp</span></div><div className="portRelationGrid"><div><span>Hàng hóa thông qua 2025</span><strong>42,67 triệu tấn</strong></div><div><span>Container 2025</span><strong>2,07 triệu TEU</strong></div><div><span>Doanh thu 2025</span><strong>3.545 tỷ</strong></div><div><span>LNTT 2025</span><strong>1.280 tỷ</strong></div></div></section></>;
 }
 
-function HTITDashboard({ data }: { data: PortOverviewResponse }) {
-  return (
-    <>
-      <section className="portPanel portEntityHero">
-        <div>
-          <span className="portEyebrow">TERMINAL · LẠCH HUYỆN</span>
-          <h2>HTIT · Bến 3–4</h2>
-          <p>
-            Terminal detail prototype: capacity, route/customer intelligence và ship-call sẽ được nối vào feed chính thức ở phase kế tiếp.
-          </p>
-        </div>
-        <span className="portPendingBadge">LIVE SHIP FEED · PENDING</span>
-      </section>
+function Sources({data}:{data:PortOverviewResponse}){return <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">SRC</span><h3>Nguồn dữ liệu & trạng thái</h3></div></div><div className="portSourceList">{data.sources.map(src=><a key={src.id} href={src.url} target="_blank" rel="noreferrer"><strong>{src.label}</strong><span>{src.organization} · {src.coverage}</span><small>{src.updateCadence}{src.note?` · ${src.note}`:""}</small><em className={`sourceState ${src.status}`}>{src.status}</em></a>)}<a href="https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx?d=0" target="_blank" rel="noreferrer"><strong>CSDL kế hoạch điều động tàu Hải Phòng</strong><span>Cảng vụ Hàng hải Hải Phòng · tàu vào/rời/di chuyển + DWT/LOA/mớn nước/tuyến/đại lý</span><small>V8.9 collector · 4 giờ/lần</small><em className="sourceState tracked">tracked</em></a></div></section>}
 
-      <div className="portKpiGrid">
-        <article className="portKpiCard">
-          <span>Trạng thái</span><strong>Đang khai thác</strong>
-          <small>đưa vào khai thác năm 2025</small>
-          <a className="portSourceChip" href="https://haiphongport.com.vn/vi/tin-tuc/dai-hoi-dong-co-dong-thuong-nien-cang-hai-phong-nam-2026-khang-dinh-vi-the-dan-dau-kien-tao-dong-luc-phat-trien-moi.html" target="_blank" rel="noreferrer">Nguồn DN ↗</a>
-        </article>
-        <article className="portKpiCard">
-          <span>Vai trò</span><strong>Cảng nước sâu</strong>
-          <small>Lạch Huyện · Hải Phòng</small>
-        </article>
-        <article className="portKpiCard">
-          <span>DWT/ngày</span><strong>—</strong>
-          <small>chờ source/feed Cảng vụ ổn định</small>
-        </article>
-        <article className="portKpiCard">
-          <span>Hãng tàu / tuyến</span><strong>—</strong>
-          <small>phase 2 · ship intelligence</small>
-        </article>
-      </div>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div><span className="portSectionIndex">01</span><h3>Ship-call pipeline target</h3></div>
-        </div>
-        <div className="portPipeline">
-          <span>Cảng vụ / lịch tàu</span><b>→</b><span>Normalize vessel + terminal + DWT</span><b>→</b>
-          <span>D1 daily aggregation</span><b>→</b><span>Tháng / Quý / YoY</span>
-        </div>
-        <p className="portFootnote">
-          V8.8 chưa tự động scrape nguồn trả phí và chưa coi DWT là sản lượng hàng hóa thực tế.
-        </p>
-      </section>
-
-      <section className="portPanel">
-        <div className="portSectionHead">
-          <div><span className="portSectionIndex">02</span><h3>Source readiness</h3></div>
-        </div>
-        <div className="portSourceList">
-          {data.sources.filter(x => ["maritime-admin", "php-news", "php-annual"].includes(x.id)).map(src => (
-            <a key={src.id} href={src.url} target="_blank" rel="noreferrer">
-              <strong>{src.label}</strong>
-              <span>{src.coverage}</span>
-              <em className={`sourceState ${src.status}`}>{src.status}</em>
-            </a>
-          ))}
-        </div>
-      </section>
-    </>
-  );
-}
-
-function Sources({ data }: { data: PortOverviewResponse }) {
-  return (
-    <section className="portPanel">
-      <div className="portSectionHead">
-        <div><span className="portSectionIndex">SRC</span><h3>Nguồn dữ liệu & trạng thái</h3></div>
-      </div>
-      <div className="portSourceList">
-        {data.sources.map(src => (
-          <a key={src.id} href={src.url} target="_blank" rel="noreferrer">
-            <strong>{src.label}</strong>
-            <span>{src.organization} · {src.coverage}</span>
-            <small>{src.updateCadence}{src.note ? ` · ${src.note}` : ""}</small>
-            <em className={`sourceState ${src.status}`}>{src.status}</em>
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function PortIndustryTab() {
-  const [view, setView] = useState<PortView>("overview");
-  const [data, setData] = useState<PortOverviewResponse | null>(null);
-  const [quotes, setQuotes] = useState<StockQuote[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getPortOverview()
-      .then(r => setData(r))
-      .catch(e => setError(String(e)));
-
-    const loadQuotes = () =>
-      getStockQuotes(["PHP", "DVP", "DXP", "GMD", "VSC", "PDN"])
-        .then(r => setQuotes(r.data ?? []))
-        .catch(() => undefined);
-
-    loadQuotes();
-    const t = window.setInterval(() => {
-      if (!document.hidden) loadQuotes();
-    }, 5000);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const phpQuote = useMemo(() => quotes.find(x => x.code === "PHP"), [quotes]);
-
-  if (error) return <div className="portPanel">Không tải được Port Industry: {error}</div>;
-  if (!data) return <div className="portPanel">Đang tải Port Industry…</div>;
-
-  return (
-    <div className="portIndustry">
-      <ResponsiveTabBar<PortView>
-        className="portSubTabs"
-        ariaLabel="Cảng biển"
-        activeId={view}
-        onChange={setView}
-        items={[
-          { id: "overview", label: "Tổng quan" },
-          { id: "php", label: "PHP" },
-          { id: "htit", label: "HTIT" },
-          { id: "sources", label: "Nguồn dữ liệu" }
-        ]}
-      />
-
-      {view === "overview" && (
-        <Overview data={data} quotes={quotes} onOpenPHP={() => setView("php")} onOpenHTIT={() => setView("htit")} />
-      )}
-      {view === "php" && <PHPDashboard data={data} quote={phpQuote} />}
-      {view === "htit" && <HTITDashboard data={data} />}
-      {view === "sources" && <Sources data={data} />}
-    </div>
-  );
+export function PortIndustryTab(){
+  const [view,setView]=useState<PortView>("overview"); const [data,setData]=useState<PortOverviewResponse|null>(null); const [quotes,setQuotes]=useState<StockQuote[]>([]); const [harbor,setHarbor]=useState<PortHarborSummary|null>(null); const [terminal,setTerminal]=useState("HTIT"); const [terminalData,setTerminalData]=useState<PortTerminalAnalytics|null>(null); const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]); const [error,setError]=useState<string|null>(null);
+  useEffect(()=>{getPortOverview().then(setData).catch(e=>setError(String(e))); getTrackedPortTerminals().then(r=>setTerminalOptions(r.data??[])).catch(()=>undefined); const load=()=>getStockQuotes(["PHP","DVP","DXP","GMD","VSC","PDN","HAH"]).then(r=>setQuotes(r.data??[])).catch(()=>undefined);load();const t=window.setInterval(()=>{if(!document.hidden)load()},5000);return()=>window.clearInterval(t)},[]);
+  useEffect(()=>{if(view==="haiphong")getPortHaiphongSummary(30).then(setHarbor).catch(e=>setError(String(e)))},[view]);
+  useEffect(()=>{if(view==="terminal"){setTerminalData(null);getPortTerminalAnalytics(terminal,90,24).then(setTerminalData).catch(e=>setError(String(e)))}},[view,terminal]);
+  const phpQuote=useMemo(()=>quotes.find(x=>x.code==="PHP"),[quotes]);
+  if(error)return <div className="portPanel">Port Industry error: {error}</div>; if(!data)return <div className="portPanel">Đang tải Port Industry…</div>;
+  return <div className="portIndustry"><ResponsiveTabBar<PortView> className="portSubTabs" ariaLabel="Cảng biển" activeId={view} onChange={setView} items={[{id:"overview",label:"Tổng quan"},{id:"haiphong",label:"Hải Phòng"},{id:"php",label:"PHP"},{id:"terminal",label:"Terminal"},{id:"sources",label:"Nguồn dữ liệu"}]}/>{view==="overview"&&<Overview data={data} quotes={quotes} onPHP={()=>setView("php")} onHarbor={()=>setView("haiphong")} onTerminal={()=>setView("terminal")}/>} {view==="haiphong"&&<HarborDashboard data={harbor}/>} {view==="php"&&<PHPDashboard data={data} quote={phpQuote}/>} {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} {view==="sources"&&<Sources data={data}/>}</div>;
 }
