@@ -190,3 +190,6 @@ export async function getPortThroughputHistory() {
 }
 
 export async function getPortCompanyPortfolio(symbol:string) { const r=await fetch(`${BASE}/api/industry/ports/company-portfolio/${encodeURIComponent(symbol)}`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port portfolio HTTP ${r.status}`); return r.json(); }
+
+export async function getNationalPortStats() { const r=await fetch(`${BASE}/api/industry/ports/national-stats`,{cache:"no-store"}); if(!r.ok) throw new Error(`National port stats HTTP ${r.status}`); return r.json(); }
+export async function getNationalPortSourceRegistry() { const r=await fetch(`${BASE}/api/industry/ports/source-registry`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port source registry HTTP ${r.status}`); return r.json(); }

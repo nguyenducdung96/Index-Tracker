@@ -12,6 +12,7 @@ import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
 import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import { getPortOverview, getPortSources, getPortCompanyPortfolio } from "./providers/industry/ports.js";
+import { getNationalPortStats, getNationalPortSourceRegistry } from "./providers/industry/portsNational.js";
 import {
   backfillHaiphongChunk,
   bootstrapHaiphongIfNeeded,
@@ -376,6 +377,14 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
     const symbol = decodeURIComponent(url.pathname.split("/").pop() || "").toUpperCase();
     const data = getPortCompanyPortfolio(symbol);
     return data ? json(data) : json({error:"portfolio-not-available",symbol},404);
+  }
+
+  if (url.pathname === "/api/industry/ports/national-stats") {
+    return json(await getNationalPortStats());
+  }
+
+  if (url.pathname === "/api/industry/ports/source-registry") {
+    return json(getNationalPortSourceRegistry());
   }
 
   if (url.pathname === "/api/industry/ports/overview") {

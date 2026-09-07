@@ -505,3 +505,6 @@ export type PortCompanyPortfolio = {
   symbol:string; name:string; exchange:string; classification:string; footprint:string[]; summary:{assetCount:number; currentSystemCapacityTeu:number|null; berthLengthKm:number|null; note:string};
   assets:PortAsset[]; capacityEvents:PortCapacityEvent[]; relatedAssets:Array<{name:string;type:PortAssetType;note:string;officialUrl:string}>; methodology:string[]; sources:Array<{label:string;url:string;asOf:string}>; serverTime:string;
 };
+
+export type NationalPortAuthorityStat = { authority:string; shipCalls:number|null; gtTotal:number|null; domesticCalls:number|null; domesticGt:number|null; foreignCalls:number|null; foreignGt:number|null; inlandCalls:number|null; inlandCargoTons:number|null; cargoTons:number|null; containerTeu:number|null; passengers:number|null; };
+export type NationalPortStatsResponse = { provider:"VIMAWA"; sourceUrl:string; sourceKind:"OFFICIAL_GOV"; fetchedAt:string; dataStatus:"LIVE_PARSED"|"SOURCE_UNAVAILABLE"; rows:NationalPortAuthorityStat[]; totals:{shipCalls:number|null;cargoTons:number|null;containerTeu:number|null;authorities:number}; note:string; };

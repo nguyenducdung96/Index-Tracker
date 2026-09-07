@@ -12,11 +12,12 @@ import {
   getTrackedPortTerminals,
   getPortRelationships,
   getPortHistoryStatus,
-  getPortCompanyPortfolio
+  getPortCompanyPortfolio,
+  getNationalPortStats
 } from "../../api";
 import type {
   PortCompany, PortCompanyIntelligence, PortHarborSummary, PortMetric, PortOverviewResponse,
-  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse, PortThroughputHistoryResponse, PortThroughputHistoryPoint, PortCompanyPortfolio
+  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse, PortThroughputHistoryResponse, PortThroughputHistoryPoint, PortCompanyPortfolio, NationalPortStatsResponse
 } from "../../types";
 import { ResponsiveTabBar } from "../ResponsiveTabBar";
 
@@ -45,7 +46,7 @@ function MiniDailyChart({rows}:{rows:Array<{date:string;dwt:number}>}){
   return <div className="portChartBox"><ResponsiveContainer width="100%" height={270}><BarChart data={rows}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="date" tickFormatter={x=>String(x).slice(5)} minTickGap={18}/><YAxis tickFormatter={x=>fmtCompact(Number(x))}/><Tooltip formatter={(v:any)=>[Number(v).toLocaleString("vi-VN"),"DWT"]}/><Bar dataKey="dwt" fill="currentColor" className="portChartBar" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div>;
 }
 
-function Overview({data,onCompany,onRegions}:{data:PortOverviewResponse;onCompany:(symbol:string)=>void;onRegions:()=>void}){
+function Overview({data,national,onCompany,onRegions}:{data:PortOverviewResponse;national:NationalPortStatsResponse|null;onCompany:(symbol:string)=>void;onRegions:()=>void}){
   const [filter,setFilter]=useState("ALL");
   const classifications=[
     {id:"ALL",label:"Tất cả"},
@@ -58,7 +59,13 @@ function Overview({data,onCompany,onRegions}:{data:PortOverviewResponse;onCompan
   const regions=["Bắc","Trung","Nam"] as const;
   const counts={listed:data.companies.length,direct:data.companies.filter(c=>c.classification==="DIRECT_PORT").length,live:(data.regionCoverage??[]).filter(x=>x.status==="live").length,sources:data.sources.filter(x=>x.status==="tracked").length};
   return <>
-    <section className="portHero portPanel portOverviewHero"><div><span className="portEyebrow">INDUSTRY ENGINE · PORTS · V8.14</span><h2>Cảng biển Việt Nam</h2><p>Universe doanh nghiệp cảng niêm yết, phân bố địa lý và độ phủ dữ liệu. Tổng quan chỉ nói về <b>toàn ngành</b>; KPI PHP, throughput terminal và dữ liệu cổ phiếu được chuyển về đúng Company/Terminal/Stock layer.</p></div><div className="portHeroActions"><button onClick={onRegions}>Khám phá khu vực</button><a className="portOverviewSourceBtn" href="#port-policy">Data policy</a></div></section>
+    <section className="portHero portPanel portOverviewHero"><div><span className="portEyebrow">INDUSTRY ENGINE · PORTS · V8.16</span><h2>Cảng biển Việt Nam</h2><p>Universe doanh nghiệp cảng niêm yết, phân bố địa lý và độ phủ dữ liệu. Tổng quan chỉ nói về <b>toàn ngành</b>; KPI PHP, throughput terminal và dữ liệu cổ phiếu được chuyển về đúng Company/Terminal/Stock layer.</p></div><div className="portHeroActions"><button onClick={onRegions}>Khám phá khu vực</button><a className="portOverviewSourceBtn" href="#port-policy">Data policy</a></div></section>
+
+    <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">00</span><h3>Toàn ngành · số liệu Nhà nước</h3></div>{national&&<a href={national.sourceUrl} target="_blank" rel="noreferrer">VIMAWA ↗</a>}</div>
+      {!national?<div className="portEmpty">Đang tải dữ liệu VIMAWA…</div>:national.dataStatus!=="LIVE_PARSED"?<div className="portScopeNotice"><strong>Official source tạm chưa parse được.</strong> App không dùng số fallback/hard-code. {national.note}</div>:<>
+      <div className="portKpiGrid"><article className="portKpiCard"><span>Lượt tàu</span><strong>{fmtCompact(national.totals.shipCalls)}</strong><small>tổng các Cảng vụ trong bảng nguồn</small></article><article className="portKpiCard"><span>Hàng hóa</span><strong>{fmtCompact(national.totals.cargoTons)}</strong><small>tấn · official scope</small></article><article className="portKpiCard"><span>Container</span><strong>{fmtCompact(national.totals.containerTeu)}</strong><small>TEU · official scope</small></article><article className="portKpiCard"><span>Cảng vụ</span><strong>{national.totals.authorities}</strong><small>records parsed</small></article></div>
+      <div className="portNationalTable"><div className="head"><span>Cảng vụ</span><span>Lượt tàu</span><span>Hàng hóa</span><span>TEU</span></div>{national.rows.map(x=><div key={x.authority}><strong>{x.authority}</strong><span>{fmt(x.shipCalls,0)}</span><span>{fmtCompact(x.cargoTons)}</span><span>{fmtCompact(x.containerTeu)}</span></div>)}</div><div className="portScopeNotice"><strong>Guardrail:</strong> Đây là aggregate theo phạm vi bảng VIMAWA; không phân bổ ngược về doanh nghiệp/terminal.</div></>}
+    </section>
 
     <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Các mã cảng niêm yết / liên quan trực tiếp</h3></div><span className="portMuted">{data.companies.length} mã · verified universe</span></div>
       <p className="portOverviewIntro">Không coi tất cả doanh nghiệp là cùng một loại: cảng trực tiếp, tập đoàn đa cảng/logistics, holding và shipping có tài sản cảng được tách classification.</p>
@@ -328,6 +335,7 @@ function CompanyRegistryOnly({company,setSymbol,options,quote}:{company:PortComp
 export function PortIndustryTab(){
   const [view,setView]=useState<PortView>("overview");
   const [data,setData]=useState<PortOverviewResponse|null>(null);
+  const [national,setNational]=useState<NationalPortStatsResponse|null>(null);
   const [quotes,setQuotes]=useState<StockQuote[]>([]);
   const [harbor,setHarbor]=useState<PortHarborSummary|null>(null);
   const [history,setHistory]=useState<PortHistoryStatus|null>(null);
@@ -343,6 +351,7 @@ export function PortIndustryTab(){
 
   useEffect(()=>{
     getPortOverview().then((r)=>{setData(r);setCompanyOptions((r.companies??[]).map((x:PortCompany)=>({symbol:x.symbol,name:x.name}))) }).catch(e=>setError(String(e)));
+    getNationalPortStats().then(setNational).catch(()=>setNational(null));
     getTrackedPortTerminals().then(r=>setTerminalOptions(r.data??[])).catch(()=>undefined);
     getPortCompanies().then(r=>setIntelligenceSymbols((r.data??[]).map((x:any)=>x.symbol))).catch(()=>undefined);
   },[]);
@@ -387,7 +396,7 @@ export function PortIndustryTab(){
       {id:"terminal",label:"Terminal"},
       {id:"sources",label:"Nguồn dữ liệu"}
     ]}/>
-    {view==="overview"&&<Overview data={data} onCompany={goCompany} onRegions={()=>setView("regions")}/>} 
+    {view==="overview"&&<Overview data={data} national={national} onCompany={goCompany} onRegions={()=>setView("regions")}/>} 
     {view==="regions"&&<RegionsDashboard data={data} harbor={harbor} history={history} onCompany={goCompany} onTerminal={()=>setView("terminal")}/>} 
     {view==="company"&&(company==="GMD"?<GmdPortfolio data={companyPortfolio} setSymbol={setCompany} options={companyOptions} quote={companyQuote}/>:intelligenceSymbols.includes(company)?<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>:<CompanyRegistryOnly company={data.companies.find(x=>x.symbol===company)??data.companies[0]} setSymbol={setCompany} options={companyOptions} quote={companyQuote}/>)} 
     {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} 
