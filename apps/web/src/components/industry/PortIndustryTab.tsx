@@ -11,11 +11,12 @@ import {
   getStockQuotes,
   getTrackedPortTerminals,
   getPortRelationships,
-  getPortHistoryStatus
+  getPortHistoryStatus,
+  getPortCompanyPortfolio
 } from "../../api";
 import type {
   PortCompany, PortCompanyIntelligence, PortHarborSummary, PortMetric, PortOverviewResponse,
-  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse, PortThroughputHistoryResponse, PortThroughputHistoryPoint
+  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse, PortThroughputHistoryResponse, PortThroughputHistoryPoint, PortCompanyPortfolio
 } from "../../types";
 import { ResponsiveTabBar } from "../ResponsiveTabBar";
 
@@ -123,6 +124,23 @@ function TerminalDashboard({terminal,setTerminal,terminalOptions,data}:{terminal
 function PHPDashboard({data,quote}:{data:PortOverviewResponse;quote?:StockQuote}){
   const m=metricMap(data.metrics); const cards=[m.get("php-throughput-2025"),m.get("php-teu-2025"),m.get("php-revenue-2025"),m.get("php-pbt-2025")].filter(Boolean) as PortMetric[];
   return <><section className="portPanel portEntityHero"><div><span className="portEyebrow">PHP · UPCOM</span><h2>Công ty Cổ phần Cảng Hải Phòng</h2><p>Company layer: official business KPI + terminal intelligence + stock engine.</p></div>{quote&&<div className="portEntityPrice"><strong className={stockClass(quote.changePercent)}>{quote.matchPrice==null?"—":quote.matchPrice.toLocaleString("vi-VN")}</strong><span className={stockClass(quote.changePercent)}>{quote.changePercent==null?"—":`${quote.changePercent>0?"+":""}${quote.changePercent.toFixed(2)}%`}</span><small>VOL/AVG {quote.volumeVsAvg20==null?"—":`${quote.volumeVsAvg20.toFixed(2)}x`}</small></div>}</section><div className="portKpiGrid">{cards.map(x=><article className="portKpiCard" key={x.id}><span>{x.label}</span><strong>{fmt(x.value)} <em>{x.unit}</em></strong><small>{x.period}</small><SourceChip sourceId={x.sourceId} data={data}/></article>)}</div><section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Operating structure</h3></div></div><div className="portTerminalBoard"><div><strong>Tân Vũ</strong><span>PHP trực tiếp · live collector hỗ trợ</span></div><div><strong>Chùa Vẽ</strong><span>PHP · live collector hỗ trợ</span></div><div><strong>Hoàng Diệu</strong><span>PHP · mapping cần theo dõi phạm vi hoạt động</span></div><div className="hot"><strong>HTIT · Lạch Huyện 3–4</strong><span>Nước sâu · live collector hỗ trợ</span></div></div></section><section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Operating ↔ Financial</h3></div><span className="portMuted">DWT không dùng để suy doanh thu trực tiếp</span></div><div className="portRelationGrid"><div><span>Hàng hóa thông qua 2025</span><strong>42,67 triệu tấn</strong></div><div><span>Container 2025</span><strong>2,07 triệu TEU</strong></div><div><span>Doanh thu 2025</span><strong>3.545 tỷ</strong></div><div><span>LNTT 2025</span><strong>1.280 tỷ</strong></div></div></section></>;
+}
+
+
+
+function assetStatusLabel(x:string){return x==="OPERATING"?"Đang vận hành":x==="EXPANDING"?"Đang mở rộng":"Đang xây dựng"}
+function assetTypeClass(x:string){return x==="DEEP_SEA_PORT"?"deep":x==="ICD"?"icd":x==="RIVER_PORT"?"river":"sea"}
+function GmdPortfolio({data,quote,setSymbol,options}:{data:PortCompanyPortfolio|null;quote?:StockQuote;setSymbol:(v:string)=>void;options:Array<{symbol:string;name:string}>}){
+ if(!data)return <section className="portPanel">Đang tải GMD Asset Portfolio…</section>;
+ return <>
+  <section className="portPanel portEntityHero"><div><span className="portEyebrow">COMPANY & ASSET PORTFOLIO · V8.15</span><h2>GMD · Gemadept</h2><p>Company layer chỉ trả lời Gemadept sở hữu/vận hành tài sản nào, ở đâu và vai trò/capacity của từng asset. Ship-call, route và DWT chi tiết để ở Terminal layer.</p></div><div className="portCompanyPicker"><select className="portTerminalSelect" value="GMD" onChange={e=>setSymbol(e.target.value)}>{options.map(x=><option key={x.symbol} value={x.symbol}>{x.symbol} · {x.name}</option>)}</select>{quote&&<div className="portEntityPrice"><strong className={stockClass(quote.changePercent)}>{quote.matchPrice==null?"—":quote.matchPrice.toLocaleString("vi-VN")}</strong><span className={stockClass(quote.changePercent)}>{quote.changePercent==null?"—":`${quote.changePercent>0?"+":""}${quote.changePercent.toFixed(2)}%`}</span></div>}</div></section>
+  <div className="portKpiGrid"><article className="portKpiCard"><span>Port & ICD network</span><strong>{data.summary.assetCount}</strong><small>Bắc · Trung · Nam</small></article><article className="portKpiCard"><span>System capacity</span><strong>{data.summary.currentSystemCapacityTeu==null?"—":`${fmtCompact(data.summary.currentSystemCapacityTeu)} TEU`}</strong><small>Gemadept system-level · không phân bổ ngược</small></article><article className="portKpiCard"><span>Berth length</span><strong>{data.summary.berthLengthKm==null?"—":`${data.summary.berthLengthKm} km`}</strong><small>current system disclosure</small></article><article className="portKpiCard"><span>Classification</span><strong>Multi-port</strong><small>Port + Logistics</small></article></div>
+  <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Asset Portfolio</h3></div><span className="portMuted">6 Ports & ICDs · official Gemadept registry</span></div><div className="portAssetRegions">{(["Bắc","Trung","Nam"] as const).map(region=><div className="portAssetRegion" key={region}><h4>MIỀN {region.toUpperCase()}</h4><div className="portAssetGrid">{data.assets.filter(a=>a.region===region).map(a=><article className={`portAssetCard ${assetTypeClass(a.type)}`} key={a.id}><div className="portAssetHead"><div><strong>{a.name}</strong><span>{a.typeLabel}</span></div><em>{assetStatusLabel(a.status)}</em></div><p>{a.role}</p><div className="portAssetFacts"><div><span>Operator</span><b>{a.operator}</b></div><div><span>Capacity</span><b>{a.capacityTeu==null?"—":`${a.capacityComparator??""}${fmtCompact(a.capacityTeu)} TEU/y`}</b></div><div><span>Max DWT</span><b>{a.maxDwt==null?"—":fmtCompact(a.maxDwt)}</b></div><div><span>Area</span><b>{a.areaHa==null?"—":`${a.areaHa} ha`}</b></div></div>{a.ownershipPct!=null&&<div className="portAssetOwnership"><span>GMD <b>{a.ownershipPct}%</b></span><span>{a.partner} <b>{a.partnerOwnershipPct}%</b></span></div>}<small>{a.note}</small><a href={a.sourceUrl} target="_blank" rel="noreferrer">Nguồn chính thức ↗</a></article>)}</div></div>)}</div></section>
+  <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Ownership & Strategic Partnerships</h3></div></div><div className="portGmdOwnership"><article><strong>Gemalink</strong><div><span>Gemadept</span><b>75%</b></div><div><span>CMA Terminals / CMA CGM</span><b>25%</b></div><p>Chỉ hiển thị tỷ lệ được nguồn chính thức Gemadept/Gemalink xác nhận. Asset khác để “—” nếu chưa có disclosure cùng scope.</p></article></div></section>
+  <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">03</span><h3>Capacity & Expansion Timeline</h3></div><span className="portMuted">ACTUAL ≠ UNDER CONSTRUCTION</span></div><div className="portCapacityEvents">{data.capacityEvents.map(e=><article key={e.id}><span>{e.date}</span><div><strong>{e.label}</strong><p>{e.note}</p><a href={e.sourceUrl} target="_blank" rel="noreferrer">Official source ↗</a></div><em className={e.status==="ACTUAL"?"actual":"estimate"}>{e.status}</em></article>)}</div></section>
+  <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">04</span><h3>Related ecosystem — tách khỏi Port & ICD</h3></div></div>{data.relatedAssets.map(x=><div className="portRelatedAsset" key={x.name}><div><strong>{x.name}</strong><span>{x.type.replace(/_/g," ")}</span></div><p>{x.note}</p><a href={x.officialUrl} target="_blank" rel="noreferrer">Nguồn ↗</a></div>)}</section>
+  <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">05</span><h3>Data guardrails</h3></div></div><div className="portMethodList">{data.methodology.map((x,i)=><div key={i}><b>{i+1}</b><span>{x}</span></div>)}</div><p className="portFootnote">{data.summary.note}</p></section>
+ </>;
 }
 
 function CompanyDashboard({symbol,setSymbol,options,data,quote}:{symbol:string;setSymbol:(v:string)=>void;options:Array<{symbol:string;name:string}>;data:PortCompanyIntelligence|null;quote?:StockQuote}){
@@ -318,6 +336,7 @@ export function PortIndustryTab(){
   const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]);
   const [company,setCompany]=useState("PHP");
   const [companyData,setCompanyData]=useState<PortCompanyIntelligence|null>(null);
+  const [companyPortfolio,setCompanyPortfolio]=useState<PortCompanyPortfolio|null>(null);
   const [companyOptions,setCompanyOptions]=useState<Array<{symbol:string;name:string}>>([]);
   const [intelligenceSymbols,setIntelligenceSymbols]=useState<string[]>([]);
   const [error,setError]=useState<string|null>(null);
@@ -349,6 +368,11 @@ export function PortIndustryTab(){
     getStockQuotes([company]).then(r=>setQuotes(r.data??[])).catch(()=>setQuotes([]));
   },[view,company,intelligenceSymbols]);
 
+  useEffect(()=>{
+    if(view!=="company" || company!=="GMD") { setCompanyPortfolio(null); return; }
+    getPortCompanyPortfolio("GMD").then(setCompanyPortfolio).catch(e=>setError(String(e)));
+  },[view,company]);
+
   const companyQuote=useMemo(()=>quotes.find(x=>x.code===company),[quotes,company]);
   const goCompany=(symbol:string)=>{setCompany(symbol);setView("company")};
 
@@ -365,7 +389,7 @@ export function PortIndustryTab(){
     ]}/>
     {view==="overview"&&<Overview data={data} onCompany={goCompany} onRegions={()=>setView("regions")}/>} 
     {view==="regions"&&<RegionsDashboard data={data} harbor={harbor} history={history} onCompany={goCompany} onTerminal={()=>setView("terminal")}/>} 
-    {view==="company"&&(intelligenceSymbols.includes(company)?<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>:<CompanyRegistryOnly company={data.companies.find(x=>x.symbol===company)??data.companies[0]} setSymbol={setCompany} options={companyOptions} quote={companyQuote}/>)} 
+    {view==="company"&&(company==="GMD"?<GmdPortfolio data={companyPortfolio} setSymbol={setCompany} options={companyOptions} quote={companyQuote}/>:intelligenceSymbols.includes(company)?<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>:<CompanyRegistryOnly company={data.companies.find(x=>x.symbol===company)??data.companies[0]} setSymbol={setCompany} options={companyOptions} quote={companyQuote}/>)} 
     {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} 
     {view==="sources"&&<Sources data={data}/>} 
   </div>;

@@ -11,7 +11,7 @@ import { validateVietnamQuotes, vietnamQualityConfig } from "./quality.js";
 import type { VietnamGoldQuote, WorldGoldQuote } from "./types.js";
 import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from "./providers/stocks/vndirect.js";
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
-import { getPortOverview, getPortSources } from "./providers/industry/ports.js";
+import { getPortOverview, getPortSources, getPortCompanyPortfolio } from "./providers/industry/ports.js";
 import {
   backfillHaiphongChunk,
   bootstrapHaiphongIfNeeded,
@@ -370,6 +370,12 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
     const offset = Math.min(Math.max(Number(url.searchParams.get("offset") ?? 0), -3650), 1);
     try { return json(await getPortSourcePreview(offset)); }
     catch (error) { return json({ error: error instanceof Error ? error.message : String(error) }, 502); }
+  }
+
+  if (url.pathname.startsWith("/api/industry/ports/company-portfolio/")) {
+    const symbol = decodeURIComponent(url.pathname.split("/").pop() || "").toUpperCase();
+    const data = getPortCompanyPortfolio(symbol);
+    return data ? json(data) : json({error:"portfolio-not-available",symbol},404);
   }
 
   if (url.pathname === "/api/industry/ports/overview") {

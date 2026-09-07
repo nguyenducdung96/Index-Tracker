@@ -188,3 +188,5 @@ export async function getPortThroughputHistory() {
   if(!r.ok) throw new Error(`Port throughput history HTTP ${r.status}`);
   return r.json();
 }
+
+export async function getPortCompanyPortfolio(symbol:string) { const r=await fetch(`${BASE}/api/industry/ports/company-portfolio/${encodeURIComponent(symbol)}`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port portfolio HTTP ${r.status}`); return r.json(); }

@@ -455,3 +455,17 @@ export type PortThroughputHistoryResponse = {
   limitations:string[];
   serverTime:string;
 };
+
+export type PortAssetType = "DEEP_SEA_PORT" | "SEAPORT" | "RIVER_PORT" | "ICD" | "FLOATING_PORT" | "AIR_CARGO";
+export type PortAssetStatus = "OPERATING" | "EXPANDING" | "UNDER_CONSTRUCTION";
+export type PortAsset = {
+  id:string; name:string; region:"Bắc"|"Trung"|"Nam"; locality:string; type:PortAssetType; typeLabel:string; status:PortAssetStatus;
+  role:string; operator:string; ownershipPct?:number|null; partner?:string|null; partnerOwnershipPct?:number|null;
+  capacityTeu?:number|null; capacityTons?:number|null; capacityComparator?:"="|">"|"~"; capacityNote?:string|null;
+  berthLengthM?:number|null; areaHa?:number|null; maxDwt?:number|null; startYear?:number|null; officialUrl:string; sourceLabel:string; sourceUrl:string; sourceAsOf:string; note?:string;
+};
+export type PortCapacityEvent = { id:string; assetId:string; date:string; label:string; status:"ACTUAL"|"UNDER_CONSTRUCTION"|"PLANNED"; capacityTeu?:number|null; comparator?:"="|">"|"~"; note:string; sourceUrl:string; };
+export type PortCompanyPortfolio = {
+  symbol:string; name:string; exchange:string; classification:string; footprint:string[]; summary:{assetCount:number; currentSystemCapacityTeu:number|null; berthLengthKm:number|null; note:string};
+  assets:PortAsset[]; capacityEvents:PortCapacityEvent[]; relatedAssets:Array<{name:string;type:PortAssetType;note:string;officialUrl:string}>; methodology:string[]; sources:Array<{label:string;url:string;asOf:string}>; serverTime:string;
+};
