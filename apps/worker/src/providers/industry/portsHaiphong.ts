@@ -7,13 +7,18 @@ import type {
   PortShipCall,
   PortTerminalAnalytics,
   PortTerminalCapability,
-  PortCompanyIntelligence
+  PortCompanyIntelligence,
+  PortRelationship,
+  PortHistoryStatus,
+  PortCompanyComparison
 } from "../../types.js";
 
 const SOURCE_BASE = "https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx";
 const SOURCE_HOME = "https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx?d=0";
 const CAPABILITY_SOURCE = "https://cangvuhaiphong.gov.vn/thong-tin-cau-cang/";
 const SOURCE_TYPE = "PORT_AUTHORITY_MOVEMENT_PLAN" as const;
+const HISTORY_TARGET_DAYS = 550; // ~18 months: enough for YoY while limiting load on the official source.
+
 
 type MovementType = "DEPARTURE" | "MOVE" | "ARRIVAL" | "CHANNEL";
 
@@ -300,17 +305,82 @@ export async function bootstrapHaiphongIfNeeded(db: D1Database) {
   return { bootstrapped:true };
 }
 
-export async function backfillHaiphongChunk(db: D1Database, days = 14) {
+export async function backfillHaiphongChunk(db: D1Database, days = 21) {
   await ensurePortSchema(db);
   const state = await db.prepare("SELECT value FROM app_state WHERE key='ports_backfill_cursor'").first<{value:string}>();
   const cursor = Number(state?.value ?? -14);
-  const offsets = Array.from({length:days},(_,i)=>cursor-i);
+
+  if (Math.abs(cursor) >= HISTORY_TARGET_DAYS) {
+    return {
+      ok: true,
+      rowsSeen: 0,
+      rowsWritten: 0,
+      fromOffset: cursor,
+      toOffset: cursor,
+      nextOffset: cursor,
+      targetReached: true,
+      targetDays: HISTORY_TARGET_DAYS
+    };
+  }
+
+  const remaining = Math.max(0, HISTORY_TARGET_DAYS - Math.abs(cursor));
+  const chunk = Math.max(1, Math.min(Math.trunc(days), remaining));
+  const offsets = Array.from({length:chunk},(_,i)=>cursor-i);
   const result = await ingestHaiphongOffsets(db, offsets);
-  const next = cursor - days;
+  const next = cursor - chunk;
+
   await db.prepare(`INSERT INTO app_state(key,value,updated_at) VALUES('ports_backfill_cursor',?,?)
     ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at`)
     .bind(String(next),Date.now()).run();
-  return { ...result, fromOffset:cursor, toOffset:next+1, nextOffset:next };
+
+  return {
+    ...result,
+    fromOffset:cursor,
+    toOffset:next+1,
+    nextOffset:next,
+    targetReached: Math.abs(next) >= HISTORY_TARGET_DAYS,
+    targetDays: HISTORY_TARGET_DAYS
+  };
+}
+
+export async function getPortHistoryStatus(db:D1Database): Promise<PortHistoryStatus> {
+  await ensurePortSchema(db);
+  const dates = await db.prepare(`SELECT
+      MIN(CASE WHEN movement_type='ARRIVAL' THEN plan_date END) earliest_arrival,
+      MAX(CASE WHEN movement_type='ARRIVAL' THEN plan_date END) latest_arrival,
+      SUM(CASE WHEN movement_type='ARRIVAL' THEN 1 ELSE 0 END) arrival_rows,
+      COUNT(*) all_rows
+    FROM port_ship_movements`).first<any>();
+  const state = await db.prepare("SELECT value FROM app_state WHERE key='ports_backfill_cursor'").first<{value:string}>();
+  const cursor = Number(state?.value ?? -14);
+
+  const earliest = dates?.earliest_arrival ?? null;
+  const latest = dates?.latest_arrival ?? null;
+  let calendarSpanDays = 0;
+  if (earliest && latest) {
+    calendarSpanDays = Math.max(
+      1,
+      Math.floor((Date.parse(`${latest}T00:00:00Z`) - Date.parse(`${earliest}T00:00:00Z`))/86400000) + 1
+    );
+  }
+
+  const targetStartDate = new Date(Date.now() - (HISTORY_TARGET_DAYS - 1)*86400000).toISOString().slice(0,10);
+  const progressPct = Math.min(100, Math.max(0, calendarSpanDays / HISTORY_TARGET_DAYS * 100));
+
+  return {
+    source:"HAIPHONG_SHIP_PLAN",
+    earliestPlanDate:earliest,
+    latestPlanDate:latest,
+    arrivalRows:num(dates?.arrival_rows),
+    allRows:num(dates?.all_rows),
+    calendarSpanDays,
+    targetDays:HISTORY_TARGET_DAYS,
+    targetStartDate,
+    backfillCursor:cursor,
+    targetReached: calendarSpanDays >= HISTORY_TARGET_DAYS - 7 || Math.abs(cursor) >= HISTORY_TARGET_DAYS,
+    progressPct,
+    serverTime:new Date().toISOString()
+  };
 }
 
 function sinceDate(days: number) {
@@ -390,17 +460,239 @@ export async function getPortSourcePreview(offset:number) {
 export const trackedPortTerminals = Object.keys(TERMINAL_LABELS).map(code=>({code,label:TERMINAL_LABELS[code]}));
 
 
-const COMPANY_INTELLIGENCE: Record<string, {name:string; terminals:Array<{code:string;ownershipPct:number|null;ownershipNote:string;capacityTeu:number|null;capacityTons:number|null;officialUrl:string;sourceLabel:string;sourceUrl:string;sourceAsOf:string}>}> = {
-  PHP: { name:"Công ty Cổ phần Cảng Hải Phòng", terminals:[
-    {code:"TAN_VU",ownershipPct:null,ownershipNote:"Đơn vị khai thác thuộc hệ thống Cảng Hải Phòng; V8.10 không suy tỷ lệ sở hữu khi nguồn chưa chuẩn hóa.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
-    {code:"CHUA_VE",ownershipPct:null,ownershipNote:"Đơn vị khai thác thuộc hệ thống Cảng Hải Phòng; không gán tỷ lệ giả định.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
-    {code:"HOANG_DIEU",ownershipPct:null,ownershipNote:"Theo dõi hoạt động trong hệ thống PHP; cần lưu ý thay đổi phạm vi khai thác theo thời gian.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"},
-    {code:"HTIT",ownershipPct:null,ownershipNote:"Liên doanh/đơn vị liên quan PHP; tỷ lệ sở hữu không hard-code trong V8.10 nếu chưa được registry hóa theo effective date.",capacityTeu:null,capacityTons:null,officialUrl:"https://haiphongport.com.vn/",sourceLabel:"Cảng Hải Phòng",sourceUrl:"https://haiphongport.com.vn/",sourceAsOf:"2026-09-08"}
-  ]},
-  GMD: { name:"Công ty Cổ phần Gemadept", terminals:[
-    {code:"NAM_DINH_VU",ownershipPct:null,ownershipNote:"Cụm cảng Nam Đình Vũ thuộc hệ sinh thái cảng Gemadept; V8.10 không suy tỷ lệ sở hữu kinh tế từ tên thương mại.",capacityTeu:2000000,capacityTons:3000000,officialUrl:"https://ndv.gemadept.com.vn/",sourceLabel:"Gemadept – Cụm cảng Nam Đình Vũ",sourceUrl:"https://www.gemadept.com.vn/cum-cang-nam-dinh-vu/",sourceAsOf:"2026-09-08"}
-  ]}
+type CompanyTerminalCfg = {
+  code:string;
+  ownershipPct:number|null;
+  ownershipNote:string;
+  capacityTeu:number|null;
+  capacityTons:number|null;
+  officialUrl:string;
+  sourceLabel:string;
+  sourceUrl:string;
+  sourceAsOf:string;
 };
+
+const COMPANY_INTELLIGENCE: Record<string, {name:string; terminals:CompanyTerminalCfg[]}> = {
+  PHP: {
+    name:"Công ty Cổ phần Cảng Hải Phòng",
+    terminals:[
+      {
+        code:"TAN_VU",
+        ownershipPct:null,
+        ownershipNote:"Chi nhánh Cảng Tân Vũ được website chính thức Cảng Hải Phòng xác nhận là chi nhánh trực thuộc; không dùng % sở hữu vì đây không phải pháp nhân độc lập.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://haiphongport.com.vn/",
+        sourceLabel:"Cảng Hải Phòng – Chi nhánh Cảng Tân Vũ",
+        sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien/chi-nhanh-cang-tan-vu-389.html",
+        sourceAsOf:"2026-09-08"
+      },
+      {
+        code:"CHUA_VE",
+        ownershipPct:null,
+        ownershipNote:"Cảng Hoàng Diệu Chùa Vẽ được Cảng Hải Phòng liệt kê trong danh sách đơn vị thành viên; chưa gán % sở hữu khi chưa chuẩn hóa pháp nhân theo BCTC 2025.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://haiphongport.com.vn/",
+        sourceLabel:"Cảng Hải Phòng – Đơn vị thành viên",
+        sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien",
+        sourceAsOf:"2026-09-08"
+      },
+      {
+        code:"HOANG_DIEU",
+        ownershipPct:null,
+        ownershipNote:"Cảng Hoàng Diệu Chùa Vẽ thuộc danh sách đơn vị thành viên Cảng Hải Phòng; mapping hoạt động được giữ riêng để theo dõi thay đổi phạm vi khai thác.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://haiphongport.com.vn/",
+        sourceLabel:"Cảng Hải Phòng – Đơn vị thành viên",
+        sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien",
+        sourceAsOf:"2026-09-08"
+      },
+      {
+        code:"HTIT",
+        ownershipPct:null,
+        ownershipNote:"Công ty TNHH Cảng Quốc tế TIL Cảng Hải Phòng (HTIT) được website Cảng Hải Phòng liệt kê là đơn vị thành viên. V8.11 chưa hard-code % sở hữu nếu chưa có nguồn pháp lý/BCTC xác nhận trực tiếp.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://haiphongport.com.vn/",
+        sourceLabel:"Cảng Hải Phòng – Đơn vị thành viên",
+        sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien",
+        sourceAsOf:"2026-09-08"
+      }
+    ]
+  },
+
+  GMD: {
+    name:"Công ty Cổ phần Gemadept",
+    terminals:[
+      {
+        code:"NAM_DINH_VU",
+        ownershipPct:null,
+        ownershipNote:"Nguồn chính thức Gemadept xác nhận Cảng Nam Đình Vũ thuộc hệ thống Gemadept; V8.11 không tự suy % sở hữu khi chưa parse trực tiếp BCTC 2025 cho pháp nhân cảng.",
+        capacityTeu:2000000,capacityTons:null,
+        officialUrl:"https://www.gemadept.com.vn/",
+        sourceLabel:"Gemadept – Nam Đình Vũ",
+        sourceUrl:"https://ndv.gemadept.com.vn/tap-doan-gemadept-va-hanh-trinh-kien-tao-ky-nguyen-hang-hai-moi/",
+        sourceAsOf:"2026-09-08"
+      }
+    ]
+  },
+
+  VSC: {
+    name:"Công ty Cổ phần Container Việt Nam",
+    terminals:[
+      {
+        code:"VIP_GREEN",
+        ownershipPct:74,
+        ownershipNote:"BCTC hợp nhất kiểm toán 2024 của VSC ghi VIP Greenport là công ty con trực tiếp với tỷ lệ sở hữu và quyền biểu quyết 74% tại 31/12/2024.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://viconship.com/",
+        sourceLabel:"VSC – BCTC hợp nhất kiểm toán 2024",
+        sourceUrl:"https://viconship.com/Upload/images/Tai%20lieu%202025/TA/20250320%20-%20VSC%20-%20AUDITED%20CONSO%20FS%202024_EN.pdf",
+        sourceAsOf:"2024-12-31"
+      },
+      {
+        code:"NAM_HAI_DINH_VU",
+        ownershipPct:99.99,
+        ownershipNote:"BCTC hợp nhất kiểm toán 2024 của VSC ghi Nam Hai Dinh Vu Port Co., Ltd. là công ty con trực tiếp, sở hữu 99,99% tại 31/12/2024. Tài liệu ĐHĐCĐ 2025 nói VSC tiếp tục tăng tỷ lệ lên gần 100%; registry giữ con số kiểm toán 99,99% đến khi parse BCTC 2025.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://viconship.com/",
+        sourceLabel:"VSC – BCTC hợp nhất kiểm toán 2024",
+        sourceUrl:"https://viconship.com/Upload/images/Tai%20lieu%202025/TA/20250320%20-%20VSC%20-%20AUDITED%20CONSO%20FS%202024_EN.pdf",
+        sourceAsOf:"2024-12-31"
+      },
+      {
+        code:"GREEN_PORT",
+        ownershipPct:null,
+        ownershipNote:"Website chính thức Viconship xác nhận GREENPORT là cảng do Viconship thành lập/vận hành trong hệ sinh thái. Không gán % pháp nhân khi chưa có linkage pháp lý đủ rõ giữa tên terminal và pháp nhân Greenport Services.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://viconship.com/",
+        sourceLabel:"Viconship – Giới thiệu",
+        sourceUrl:"https://viconship.com/gioi-thieu",
+        sourceAsOf:"2026-09-08"
+      }
+    ]
+  },
+
+  DVP: {
+    name:"CTCP Đầu tư và Phát triển Cảng Đình Vũ",
+    terminals:[
+      {
+        code:"DINH_VU",
+        ownershipPct:null,
+        ownershipNote:"Cảng Đình Vũ là terminal do chính CTCP Đầu tư và Phát triển Cảng Đình Vũ khai thác; % sở hữu không áp dụng vì terminal không được mô hình hóa như pháp nhân con.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://dinhvuport.com.vn/",
+        sourceLabel:"Cảng Đình Vũ – website chính thức",
+        sourceUrl:"https://dinhvuport.com.vn/",
+        sourceAsOf:"2026-09-08"
+      }
+    ]
+  },
+
+  HAH: {
+    name:"CTCP Vận tải và Xếp dỡ Hải An",
+    terminals:[
+      {
+        code:"HAI_AN",
+        ownershipPct:100,
+        ownershipNote:"Báo cáo thường niên 2024 của HAH ghi Công ty TNHH Cảng Hải An là công ty con với tỷ lệ sở hữu 100% tại 31/12/2024. Registry chưa nâng mốc as-of nếu chưa parse được bảng tương ứng trong BCTN 2025.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://haiants.vn/",
+        sourceLabel:"HAH – Báo cáo thường niên 2024",
+        sourceUrl:"https://haiants.vn/files/Quan_he_co_dong/Bao-cao-thuong-nien/HAH-Bao-cao-thuong-nien-nam-2024-F.pdf",
+        sourceAsOf:"2024-12-31"
+      }
+    ]
+  },
+
+  DXP: {
+    name:"Công ty Cổ phần Cảng Đoạn Xá",
+    terminals:[
+      {
+        code:"DOAN_XA",
+        ownershipPct:null,
+        ownershipNote:"Website chính thức DXP xác nhận Cảng Đoạn Xá do chính DXP khai thác, chính thức hoạt động từ 27/11/2001 và tiếp nhận tàu đến 40.000 DWT giảm tải.",
+        capacityTeu:null,capacityTons:null,
+        officialUrl:"https://doanxaport.com.vn/",
+        sourceLabel:"DXP – Dịch vụ khai thác cảng",
+        sourceUrl:"https://doanxaport.com.vn/dich-vu-khai-thac-cang",
+        sourceAsOf:"2026-09-08"
+      }
+    ]
+  }
+};
+
+/*
+ * Relationship registry is separate from the movement-aggregation registry.
+ * This prevents double counting. Example: PHP officially held 51% of DVP
+ * according to Port of Hai Phong's 2025 AGM news, but DVP's DINH_VU movements
+ * remain counted only in DVP company analytics, not again inside PHP.
+ */
+export const PORT_RELATIONSHIPS: PortRelationship[] = [
+  {
+    companySymbol:"PHP", companyName:"Công ty Cổ phần Cảng Hải Phòng",
+    terminalCode:"TAN_VU", terminalLabel:"Tân Vũ", relatedCompany:null,
+    relationshipType:"DIRECT_BRANCH", ownershipPct:null,
+    effectiveFrom:null,effectiveTo:null,asOf:"2026-09-08",
+    sourceLabel:"Cảng Hải Phòng – Chi nhánh Cảng Tân Vũ",
+    sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien/chi-nhanh-cang-tan-vu-389.html",
+    note:"Chi nhánh trực thuộc; không biểu diễn bằng % sở hữu."
+  },
+  {
+    companySymbol:"PHP", companyName:"Công ty Cổ phần Cảng Hải Phòng",
+    terminalCode:"HTIT", terminalLabel:"HTIT · Lạch Huyện 3–4",
+    relatedCompany:"Công ty TNHH Cảng Quốc tế TIL Cảng Hải Phòng",
+    relationshipType:"MEMBER_COMPANY", ownershipPct:null,
+    effectiveFrom:null,effectiveTo:null,asOf:"2026-09-08",
+    sourceLabel:"Cảng Hải Phòng – Đơn vị thành viên",
+    sourceUrl:"https://haiphongport.com.vn/vi/don-vi-thanh-vien",
+    note:"Website chính thức xác nhận quan hệ đơn vị thành viên; chưa gán % khi chưa có nguồn pháp lý/BCTC trực tiếp."
+  },
+  {
+    companySymbol:"PHP", companyName:"Công ty Cổ phần Cảng Hải Phòng",
+    terminalCode:"DINH_VU", terminalLabel:"Đình Vũ",
+    relatedCompany:"CTCP Đầu tư và Phát triển Cảng Đình Vũ (DVP)",
+    relationshipType:"SUBSIDIARY", ownershipPct:51,
+    effectiveFrom:null,effectiveTo:null,asOf:"2025-04-18",
+    sourceLabel:"Cảng Hải Phòng – ĐHĐCĐ DVP 2025",
+    sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/dai-hoi-co-dong-thuong-nien-nam-2025-cua-cong-ty-cp-dau-tu-va-phat-trien-cang-dinh-vu.html",
+    note:"Nguồn chính thức Cảng Hải Phòng ghi Cảng Hải Phòng nắm 51% vốn điều lệ DVP. Không cộng DVP vào PHP DWT proxy để tránh double count."
+  },
+  {
+    companySymbol:"VSC", companyName:"Công ty Cổ phần Container Việt Nam",
+    terminalCode:"VIP_GREEN", terminalLabel:"VIP Green Port",
+    relatedCompany:"VIP Greenport JSC", relationshipType:"SUBSIDIARY",
+    ownershipPct:74,effectiveFrom:null,effectiveTo:null,asOf:"2024-12-31",
+    sourceLabel:"VSC – BCTC hợp nhất kiểm toán 2024",
+    sourceUrl:"https://viconship.com/Upload/images/Tai%20lieu%202025/TA/20250320%20-%20VSC%20-%20AUDITED%20CONSO%20FS%202024_EN.pdf",
+    note:"Tỷ lệ sở hữu và quyền biểu quyết 74% tại 31/12/2024."
+  },
+  {
+    companySymbol:"VSC", companyName:"Công ty Cổ phần Container Việt Nam",
+    terminalCode:"NAM_HAI_DINH_VU", terminalLabel:"Nam Hải Đình Vũ",
+    relatedCompany:"Nam Hai Dinh Vu Port Co., Ltd.", relationshipType:"SUBSIDIARY",
+    ownershipPct:99.99,effectiveFrom:"2024-07-18",effectiveTo:null,asOf:"2024-12-31",
+    sourceLabel:"VSC – BCTC hợp nhất kiểm toán 2024",
+    sourceUrl:"https://viconship.com/Upload/images/Tai%20lieu%202025/TA/20250320%20-%20VSC%20-%20AUDITED%20CONSO%20FS%202024_EN.pdf",
+    note:"BCTC ghi 99,99% tại 31/12/2024; tài liệu 2025 nói tiếp tục tăng lên gần 100%."
+  },
+  {
+    companySymbol:"HAH", companyName:"CTCP Vận tải và Xếp dỡ Hải An",
+    terminalCode:"HAI_AN", terminalLabel:"Hải An",
+    relatedCompany:"Công ty TNHH Cảng Hải An", relationshipType:"SUBSIDIARY",
+    ownershipPct:100,effectiveFrom:null,effectiveTo:null,asOf:"2024-12-31",
+    sourceLabel:"HAH – Báo cáo thường niên 2024",
+    sourceUrl:"https://haiants.vn/files/Quan_he_co_dong/Bao-cao-thuong-nien/HAH-Bao-cao-thuong-nien-nam-2024-F.pdf",
+    note:"BCTN 2024 ghi công ty con 100% tại 31/12/2024."
+  },
+  {
+    companySymbol:"DXP", companyName:"Công ty Cổ phần Cảng Đoạn Xá",
+    terminalCode:"DOAN_XA", terminalLabel:"Đoạn Xá", relatedCompany:null,
+    relationshipType:"DIRECT_OPERATOR", ownershipPct:null,
+    effectiveFrom:"2001-11-27",effectiveTo:null,asOf:"2026-09-08",
+    sourceLabel:"DXP – Dịch vụ khai thác cảng",
+    sourceUrl:"https://doanxaport.com.vn/dich-vu-khai-thac-cang",
+    note:"DXP xác nhận trực tiếp khai thác Cảng Đoạn Xá; tiếp nhận tàu đến 40.000 DWT giảm tải."
+  }
+];
 
 export const trackedPortCompanies = Object.entries(COMPANY_INTELLIGENCE).map(([symbol,x])=>({symbol,name:x.name}));
 
@@ -418,5 +710,51 @@ export async function getPortCompanyIntelligence(db:D1Database, symbol:string, d
   const recent=[...mm.keys()].sort().slice(-months); const monthly=recent.map(month=>{const cur:any=mm.get(month); const [y,m]=month.split('-'); const prev:any=mm.get(`${Number(y)-1}-${m}`); return {month,dwt:cur.dwt,shipCalls:cur.shipCalls,previousYearDwt:prev?.dwt??null,yoyDwtPct:prev?.dwt>0?(cur.dwt/prev.dwt-1)*100:null};});
   const routeRaw=await db.prepare(`SELECT from_raw route,COALESCE(SUM(dwt),0) dwt,COUNT(*) ship_calls FROM port_ship_movements WHERE movement_type='ARRIVAL' AND to_terminal IN (${placeholders}) AND plan_date>=? GROUP BY from_raw ORDER BY dwt DESC LIMIT 12`).bind(...terminals,since).all<any>();
   const capacityTeu=cfg.terminals.every(x=>x.capacityTeu!=null)?cfg.terminals.reduce((a,x)=>a+(x.capacityTeu??0),0):cfg.terminals.some(x=>x.capacityTeu!=null)?cfg.terminals.reduce((a,x)=>a+(x.capacityTeu??0),0):null;
-  return {symbol:code,name:cfg.name,days,terminals:cfg.terminals.map(x=>({...x,label:TERMINAL_LABELS[x.code]??x.code})),summary:{dwt:totalDwt,shipCalls:totalCalls,avgDwt:nullableNum(overall?.avg_dwt),maxDwt:nullableNum(overall?.max_dwt),terminalCount:terminals.length,capacityTeu},terminalStats:rows.map((x:any)=>{const c=cfg.terminals.find(t=>t.code===x.terminal);return{terminal:x.terminal,terminalLabel:TERMINAL_LABELS[x.terminal]??x.terminal,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0,capacityTeu:c?.capacityTeu??null,ownershipPct:c?.ownershipPct??null}}),monthly,routes:(routeRaw.results??[]).map((x:any)=>({route:x.route,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0})),caveats:["DWT là proxy quy mô tàu, không phải TEU hay sản lượng hàng thực tế.","Ship-call dùng ARRIVAL convention từ kế hoạch điều động; chưa mặc định là actual realized call.","Company aggregation chỉ gồm terminal đã được registry; không tự suy terminal chưa xác minh.","Ownership % để null khi chưa có nguồn/effective-date registry đủ chắc chắn."],serverTime:new Date().toISOString()};
+  return {symbol:code,name:cfg.name,days,terminals:cfg.terminals.map(x=>({...x,label:TERMINAL_LABELS[x.code]??x.code})),summary:{dwt:totalDwt,shipCalls:totalCalls,avgDwt:nullableNum(overall?.avg_dwt),maxDwt:nullableNum(overall?.max_dwt),terminalCount:terminals.length,capacityTeu},terminalStats:rows.map((x:any)=>{const c=cfg.terminals.find(t=>t.code===x.terminal);return{terminal:x.terminal,terminalLabel:TERMINAL_LABELS[x.terminal]??x.terminal,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0,capacityTeu:c?.capacityTeu??null,ownershipPct:c?.ownershipPct??null}}),monthly,routes:(routeRaw.results??[]).map((x:any)=>({route:x.route,dwt:num(x.dwt),shipCalls:num(x.ship_calls),shareDwtPct:totalDwt>0?num(x.dwt)/totalDwt*100:0})),relationships:PORT_RELATIONSHIPS.filter(r=>r.companySymbol===code),caveats:["DWT là proxy quy mô tàu, không phải TEU hay sản lượng hàng thực tế.","Ship-call dùng ARRIVAL convention từ kế hoạch điều động; chưa mặc định là actual realized call.","Company aggregation chỉ gồm terminal đã được registry; không tự suy terminal chưa xác minh.","Ownership % để null khi chưa có nguồn/effective-date registry đủ chắc chắn."],serverTime:new Date().toISOString()};
+}
+
+
+export function getPortRelationships(symbol?:string) {
+  const code = symbol?.trim().toUpperCase();
+  const data = code ? PORT_RELATIONSHIPS.filter(x=>x.companySymbol===code) : PORT_RELATIONSHIPS;
+  return { data, serverTime:new Date().toISOString() };
+}
+
+export async function getPortCompanyComparison(db:D1Database, days=90, months=24): Promise<PortCompanyComparison> {
+  await ensurePortSchema(db);
+  const symbols = Object.keys(COMPANY_INTELLIGENCE);
+  const rows = await Promise.all(symbols.map(async symbol => {
+    const x = await getPortCompanyIntelligence(db, symbol, days, months);
+    const latest = x.monthly.length ? x.monthly[x.monthly.length-1] : null;
+    return {
+      symbol:x.symbol,
+      name:x.name,
+      terminals:x.terminals.map(t=>t.label),
+      dwt:x.summary.dwt,
+      shipCalls:x.summary.shipCalls,
+      avgDwt:x.summary.avgDwt,
+      maxDwt:x.summary.maxDwt,
+      latestMonth:latest?.month ?? null,
+      latestMonthDwt:latest?.dwt ?? null,
+      latestMonthYoyPct:latest?.yoyDwtPct ?? null,
+      shareOfTrackedDwtPct:0,
+      relationshipCoverage:"verified" as const,
+      caveat:"Share chỉ tính trên tập terminal đã registry cho 6 doanh nghiệp, không phải market share TEU/toàn Hải Phòng."
+    };
+  }));
+
+  const totalTrackedDwt = rows.reduce((a,x)=>a+x.dwt,0);
+  const withShare = rows
+    .map(x=>({...x,shareOfTrackedDwtPct:totalTrackedDwt>0?x.dwt/totalTrackedDwt*100:0}))
+    .sort((a,b)=>b.dwt-a.dwt);
+
+  return {
+    days,
+    universe:symbols,
+    totalTrackedDwt,
+    rows:withShare,
+    label:"SHARE_OF_TRACKED_COMPANY_DWT_PROXY",
+    note:"Không gọi đây là thị phần ngành. Đây là tỷ trọng DWT arrival proxy trong tập terminal đã xác minh và không chồng lặp giữa các doanh nghiệp.",
+    serverTime:new Date().toISOString()
+  };
 }

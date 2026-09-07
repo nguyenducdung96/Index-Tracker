@@ -301,6 +301,71 @@ export type PortCompanyIntelligence = {
   terminalStats: Array<{ terminal:string; terminalLabel:string; dwt:number; shipCalls:number; shareDwtPct:number; capacityTeu:number|null; ownershipPct:number|null; }>;
   monthly: Array<{ month:string; dwt:number; shipCalls:number; previousYearDwt:number|null; yoyDwtPct:number|null; }>;
   routes: Array<{ route:string; dwt:number; shipCalls:number; shareDwtPct:number; }>;
+  relationships?: PortRelationship[];
   caveats:string[];
   serverTime:string;
+};
+
+
+export type PortRelationship = {
+  companySymbol: string;
+  companyName: string;
+  terminalCode: string | null;
+  terminalLabel: string | null;
+  relatedCompany?: string | null;
+  relationshipType:
+    | "DIRECT_BRANCH"
+    | "DIRECT_OPERATOR"
+    | "MEMBER_COMPANY"
+    | "SUBSIDIARY"
+    | "AFFILIATE"
+    | "PORT_ECOSYSTEM";
+  ownershipPct: number | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  asOf: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  note: string;
+};
+
+export type PortHistoryStatus = {
+  source: "HAIPHONG_SHIP_PLAN";
+  earliestPlanDate: string | null;
+  latestPlanDate: string | null;
+  arrivalRows: number;
+  allRows: number;
+  calendarSpanDays: number;
+  targetDays: number;
+  targetStartDate: string;
+  backfillCursor: number;
+  targetReached: boolean;
+  progressPct: number;
+  serverTime: string;
+};
+
+export type PortCompanyComparisonRow = {
+  symbol: string;
+  name: string;
+  terminals: string[];
+  dwt: number;
+  shipCalls: number;
+  avgDwt: number | null;
+  maxDwt: number | null;
+  latestMonth: string | null;
+  latestMonthDwt: number | null;
+  latestMonthYoyPct: number | null;
+  shareOfTrackedDwtPct: number;
+  relationshipCoverage: "verified";
+  caveat: string;
+};
+
+export type PortCompanyComparison = {
+  days: number;
+  universe: string[];
+  totalTrackedDwt: number;
+  rows: PortCompanyComparisonRow[];
+  label: "SHARE_OF_TRACKED_COMPANY_DWT_PROXY";
+  note: string;
+  serverTime: string;
 };

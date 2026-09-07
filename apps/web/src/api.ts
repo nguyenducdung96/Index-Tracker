@@ -156,3 +156,23 @@ export async function getTrackedPortTerminals() {
 
 export async function getPortCompanies() { const r=await fetch(`${BASE}/api/industry/ports/companies`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port companies HTTP ${r.status}`); return r.json(); }
 export async function getPortCompanyIntelligence(symbol:string,days=90,months=24) { const r=await fetch(`${BASE}/api/industry/ports/company/${encodeURIComponent(symbol)}?days=${days}&months=${months}`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port company HTTP ${r.status}`); return r.json(); }
+
+
+export async function getPortHistoryStatus() {
+  const r = await fetch(`${BASE}/api/industry/ports/history-status`, { cache:"no-store" });
+  if (!r.ok) throw new Error(`Port history status HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getPortRelationships(symbol?:string) {
+  const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : "";
+  const r = await fetch(`${BASE}/api/industry/ports/relationships${q}`, { cache:"no-store" });
+  if (!r.ok) throw new Error(`Port relationships HTTP ${r.status}`);
+  return r.json();
+}
+
+export async function getPortCompanyComparison(days=90, months=24) {
+  const r = await fetch(`${BASE}/api/industry/ports/company-comparison?days=${days}&months=${months}`, { cache:"no-store" });
+  if (!r.ok) throw new Error(`Port company comparison HTTP ${r.status}`);
+  return r.json();
+}

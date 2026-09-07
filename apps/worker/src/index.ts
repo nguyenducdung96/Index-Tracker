@@ -21,7 +21,10 @@ import {
   ingestHaiphongOffsets,
   trackedPortTerminals,
   trackedPortCompanies,
-  getPortCompanyIntelligence
+  getPortCompanyIntelligence,
+  getPortRelationships,
+  getPortCompanyComparison,
+  getPortHistoryStatus
 } from "./providers/industry/portsHaiphong.js";
 import {
   addWatchlistSymbol,
@@ -310,6 +313,20 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
 
   if (url.pathname === "/api/industry/ports/terminals") {
     return json({ data: trackedPortTerminals, serverTime: new Date().toISOString() });
+  }
+
+  if (url.pathname === "/api/industry/ports/history-status") {
+    return json(await getPortHistoryStatus(env.DB));
+  }
+
+  if (url.pathname === "/api/industry/ports/relationships") {
+    return json(getPortRelationships(url.searchParams.get("symbol") ?? undefined));
+  }
+
+  if (url.pathname === "/api/industry/ports/company-comparison") {
+    const days = Math.max(7, Math.min(365, Number(url.searchParams.get("days") ?? 90)));
+    const months = Math.max(3, Math.min(36, Number(url.searchParams.get("months") ?? 24)));
+    return json(await getPortCompanyComparison(env.DB, days, months));
   }
 
   if (url.pathname === "/api/industry/ports/companies") {
@@ -654,7 +671,7 @@ export default {
       ctx.waitUntil((async () => {
         try {
           await cleanup(env.DB);
-          try { await backfillHaiphongChunk(env.DB, 14); }
+          try { await backfillHaiphongChunk(env.DB, 21); }
           catch (e) { console.error("Port history backfill chunk failed", e); }
           await logCron(env.DB, "cleanup", true);
         } catch (e) {

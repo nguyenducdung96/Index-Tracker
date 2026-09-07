@@ -9,15 +9,18 @@ import {
   getPortOverview,
   getPortTerminalAnalytics,
   getStockQuotes,
-  getTrackedPortTerminals
+  getTrackedPortTerminals,
+  getPortCompanyComparison,
+  getPortRelationships,
+  getPortHistoryStatus
 } from "../../api";
 import type {
   PortCompany, PortCompanyIntelligence, PortHarborSummary, PortMetric, PortOverviewResponse,
-  PortTerminalAnalytics, StockQuote
+  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus
 } from "../../types";
 import { ResponsiveTabBar } from "../ResponsiveTabBar";
 
-type PortView = "overview" | "haiphong" | "company" | "terminal" | "sources";
+type PortView = "overview" | "haiphong" | "comparison" | "company" | "terminal" | "sources";
 
 function fmt(v:number|null|undefined,digits=1){ return v==null?"—":v.toLocaleString("vi-VN",{maximumFractionDigits:digits}); }
 function fmtCompact(v:number|null|undefined){ if(v==null)return"—"; if(v>=1e9)return`${(v/1e9).toFixed(2)}B`; if(v>=1e6)return`${(v/1e6).toFixed(2)}M`; if(v>=1e3)return`${(v/1e3).toFixed(1)}K`; return fmt(v,0); }
@@ -93,20 +96,116 @@ function CompanyDashboard({symbol,setSymbol,options,data,quote}:{symbol:string;s
       <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">02</span><h3>Monthly DWT & YoY</h3></div><span className="portMuted">YoY = — nếu lịch sử chưa đủ 12 tháng</span></div><div className="portChartBox"><ResponsiveContainer width="100%" height={280}><BarChart data={data.monthly}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="month"/><YAxis tickFormatter={x=>fmtCompact(Number(x))}/><Tooltip formatter={(v:any)=>[Number(v).toLocaleString("vi-VN"),"DWT"]}/><Bar dataKey="dwt" fill="currentColor" className="portChartBar" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div><div className="portYoyGrid">{data.monthly.slice(-6).map(x=><div key={x.month}><span>{x.month}</span><strong>{fmtCompact(x.dwt)}</strong><em className={x.yoyDwtPct==null?"ref":stockClass(x.yoyDwtPct)}>{x.yoyDwtPct==null?"YoY —":`${x.yoyDwtPct>0?"+":""}${x.yoyDwtPct.toFixed(1)}% YoY`}</em></div>)}</div></section>
       <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">03</span><h3>Terminal registry</h3></div></div><div className="portCompanyGrid">{data.terminals.map(t=><article className="portCompanyCard" key={t.code}><div className="portCompanyTitle"><strong>{t.label}</strong><span>{t.capacityTeu==null?"Capacity —":`${fmtCompact(t.capacityTeu)} TEU/năm`}</span></div><p>{t.ownershipNote}</p><a href={t.sourceUrl} target="_blank" rel="noreferrer">Nguồn chính thức ↗</a></article>)}</div></section>
       <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">04</span><h3>Route mix</h3></div></div><div className="portRankList">{data.routes.map((x,i)=><div key={x.route}><span>{i+1}. {x.route}</span><b>{x.shareDwtPct.toFixed(1)}%</b><em>{x.shipCalls} calls</em></div>)}</div></section>
+      <OwnershipPanel relationships={(data as any).relationships ?? []} />
       <div className="portScopeNotice"><strong>Data guardrails:</strong> {data.caveats.join(" · ")}</div>
     </>}
   </>;
 }
 
+
+function ComparisonDashboard({data,quotes}:{data:PortCompanyComparison|null;quotes:StockQuote[]}) {
+  if(!data) return <div className="portPanel">Đang tải Company Comparison…</div>;
+  const qMap = new Map(quotes.map(x=>[x.code,x]));
+  return <>
+    <section className="portPanel portEntityHero">
+      <div>
+        <span className="portEyebrow">PORT COMPANY MONITOR · V8.11</span>
+        <h2>So sánh doanh nghiệp cảng Hải Phòng</h2>
+        <p>
+          DWT/ship-call dùng arrival proxy từ terminal registry đã xác minh. Tỷ trọng ở đây chỉ là
+          <b> share trong tập tracked-company DWT</b>, không phải thị phần TEU/toàn ngành.
+        </p>
+      </div>
+      <div className="portPendingBadge">{data.days}D OPERATING WINDOW</div>
+    </section>
+
+    <section className="portPanel">
+      <div className="portSectionHead">
+        <div><span className="portSectionIndex">01</span><h3>Operating momentum</h3></div>
+        <span className="portMuted">YoY = — nếu backfill chưa đủ cùng tháng năm trước</span>
+      </div>
+      <div className="portComparisonGrid">
+        {data.rows.map((x,i)=>{
+          const q=qMap.get(x.symbol);
+          return <article className="portComparisonCard" key={x.symbol}>
+            <div className="portComparisonHead">
+              <div><b>{i+1}</b><strong>{x.symbol}</strong><span>{x.name}</span></div>
+              {q && <em className={stockClass(q.changePercent)}>{q.changePercent==null?"—":`${q.changePercent>0?"+":""}${q.changePercent.toFixed(2)}%`}</em>}
+            </div>
+            <div className="portComparisonMetrics">
+              <div><span>DWT {data.days}D</span><strong>{fmtCompact(x.dwt)}</strong></div>
+              <div><span>Calls</span><strong>{fmt(x.shipCalls,0)}</strong></div>
+              <div><span>Avg DWT</span><strong>{fmtCompact(x.avgDwt)}</strong></div>
+              <div><span>Tracked share</span><strong>{x.shareOfTrackedDwtPct.toFixed(1)}%</strong></div>
+            </div>
+            <div className="portComparisonFooter">
+              <span>{x.latestMonth ?? "—"}</span>
+              <b className={x.latestMonthYoyPct==null?"ref":stockClass(x.latestMonthYoyPct)}>
+                {x.latestMonthYoyPct==null?"YoY —":`${x.latestMonthYoyPct>0?"+":""}${x.latestMonthYoyPct.toFixed(1)}% YoY`}
+              </b>
+            </div>
+          </article>
+        })}
+      </div>
+      <p className="portFootnote">{data.note}</p>
+    </section>
+  </>;
+}
+
+function OwnershipPanel({relationships}:{relationships:PortRelationship[]}) {
+  return <section className="portPanel">
+    <div className="portSectionHead">
+      <div><span className="portSectionIndex">REL</span><h3>Ownership / operator registry</h3></div>
+      <span className="portMuted">Chỉ hiển thị quan hệ có nguồn chính thức</span>
+    </div>
+    <div className="portOwnershipList">
+      {relationships.map((x,i)=><article key={`${x.companySymbol}-${x.terminalCode}-${i}`}>
+        <div>
+          <strong>{x.terminalLabel ?? x.relatedCompany ?? x.companySymbol}</strong>
+          <span>{x.relationshipType.replaceAll("_"," ")}</span>
+        </div>
+        <div className="portOwnershipPct">
+          <b>{x.ownershipPct==null?"—":`${x.ownershipPct.toFixed(x.ownershipPct%1?2:0)}%`}</b>
+          <small>{x.asOf}</small>
+        </div>
+        <p>{x.note}</p>
+        <a href={x.sourceUrl} target="_blank" rel="noreferrer">Nguồn chính thức ↗</a>
+      </article>)}
+    </div>
+  </section>;
+}
+
+function HistoryProgress({history}:{history:PortHistoryStatus|null}) {
+  if(!history) return null;
+  return <section className="portPanel">
+    <div className="portSectionHead">
+      <div><span className="portSectionIndex">HIS</span><h3>Historical backfill</h3></div>
+      <span className={history.targetReached?"up":"ref"}>{history.progressPct.toFixed(1)}%</span>
+    </div>
+    <div className="portHistoryTrack"><i style={{width:`${Math.min(100,history.progressPct)}%`}} /></div>
+    <div className="portHistoryMeta">
+      <span>Earliest <b>{history.earliestPlanDate ?? "—"}</b></span>
+      <span>Latest <b>{history.latestPlanDate ?? "—"}</b></span>
+      <span>Arrival rows <b>{history.arrivalRows.toLocaleString("vi-VN")}</b></span>
+      <span>Target <b>{history.targetDays} ngày (~18 tháng)</b></span>
+    </div>
+    <p className="portFootnote">
+      Cron backfill 21 ngày dữ liệu mỗi ngày cho đến target. YoY chỉ hiện khi có cùng tháng năm trước.
+    </p>
+  </section>;
+}
+
 function Sources({data}:{data:PortOverviewResponse}){return <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">SRC</span><h3>Nguồn dữ liệu & trạng thái</h3></div></div><div className="portSourceList">{data.sources.map(src=><a key={src.id} href={src.url} target="_blank" rel="noreferrer"><strong>{src.label}</strong><span>{src.organization} · {src.coverage}</span><small>{src.updateCadence}{src.note?` · ${src.note}`:""}</small><em className={`sourceState ${src.status}`}>{src.status}</em></a>)}<a href="https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx?d=0" target="_blank" rel="noreferrer"><strong>CSDL kế hoạch điều động tàu Hải Phòng</strong><span>Cảng vụ Hàng hải Hải Phòng · tàu vào/rời/di chuyển + DWT/LOA/mớn nước/tuyến/đại lý</span><small>V8.10 collector · 4 giờ/lần</small><em className="sourceState tracked">tracked</em></a></div></section>}
 
 export function PortIndustryTab(){
-  const [view,setView]=useState<PortView>("overview"); const [data,setData]=useState<PortOverviewResponse|null>(null); const [quotes,setQuotes]=useState<StockQuote[]>([]); const [harbor,setHarbor]=useState<PortHarborSummary|null>(null); const [terminal,setTerminal]=useState("HTIT"); const [terminalData,setTerminalData]=useState<PortTerminalAnalytics|null>(null); const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]); const [company,setCompany]=useState("PHP"); const [companyData,setCompanyData]=useState<PortCompanyIntelligence|null>(null); const [companyOptions,setCompanyOptions]=useState<Array<{symbol:string;name:string}>>([{symbol:"PHP",name:"Cảng Hải Phòng"},{symbol:"GMD",name:"Gemadept"}]); const [error,setError]=useState<string|null>(null);
+  const [view,setView]=useState<PortView>("overview"); const [data,setData]=useState<PortOverviewResponse|null>(null); const [quotes,setQuotes]=useState<StockQuote[]>([]); const [harbor,setHarbor]=useState<PortHarborSummary|null>(null); const [terminal,setTerminal]=useState("HTIT"); const [terminalData,setTerminalData]=useState<PortTerminalAnalytics|null>(null); const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]); const [company,setCompany]=useState("PHP"); const [companyData,setCompanyData]=useState<PortCompanyIntelligence|null>(null); const [comparison,setComparison]=useState<PortCompanyComparison|null>(null); const [relationships,setRelationships]=useState<PortRelationship[]>([]); const [history,setHistory]=useState<PortHistoryStatus|null>(null); const [companyOptions,setCompanyOptions]=useState<Array<{symbol:string;name:string}>>([{symbol:"PHP",name:"Cảng Hải Phòng"},{symbol:"GMD",name:"Gemadept"}]); const [error,setError]=useState<string|null>(null);
   useEffect(()=>{getPortOverview().then(setData).catch(e=>setError(String(e))); getTrackedPortTerminals().then(r=>setTerminalOptions(r.data??[])).catch(()=>undefined); getPortCompanies().then(r=>setCompanyOptions(r.data??[])).catch(()=>undefined); const load=()=>getStockQuotes(["PHP","DVP","DXP","GMD","VSC","PDN","HAH"]).then(r=>setQuotes(r.data??[])).catch(()=>undefined);load();const t=window.setInterval(()=>{if(!document.hidden)load()},5000);return()=>window.clearInterval(t)},[]);
   useEffect(()=>{if(view==="haiphong")getPortHaiphongSummary(30).then(setHarbor).catch(e=>setError(String(e)))},[view]);
   useEffect(()=>{if(view==="terminal"){setTerminalData(null);getPortTerminalAnalytics(terminal,90,24).then(setTerminalData).catch(e=>setError(String(e)))}},[view,terminal]);
-  useEffect(()=>{if(view==="company"){setCompanyData(null);getPortCompanyIntelligence(company,90,24).then(setCompanyData).catch(e=>setError(String(e)))}},[view,company]);
+  useEffect(()=>{if(view==="company"){setCompanyData(null);Promise.all([getPortCompanyIntelligence(company,90,24),getPortRelationships(company)]).then(([d,r])=>{setCompanyData({...d,relationships:r.data??[]} as any);setRelationships(r.data??[])}).catch(e=>setError(String(e)))}},[view,company]);
+  useEffect(()=>{if(view==="comparison"){setComparison(null);getPortCompanyComparison(90,24).then(setComparison).catch(e=>setError(String(e)))}},[view]);
+  useEffect(()=>{if(view==="haiphong"){getPortHistoryStatus().then(setHistory).catch(()=>undefined)}},[view]);
   const companyQuote=useMemo(()=>quotes.find(x=>x.code===company),[quotes,company]);
   if(error)return <div className="portPanel">Port Industry error: {error}</div>; if(!data)return <div className="portPanel">Đang tải Port Industry…</div>;
-  return <div className="portIndustry"><ResponsiveTabBar<PortView> className="portSubTabs" ariaLabel="Cảng biển" activeId={view} onChange={setView} items={[{id:"overview",label:"Tổng quan"},{id:"haiphong",label:"Hải Phòng"},{id:"company",label:"Doanh nghiệp"},{id:"terminal",label:"Terminal"},{id:"sources",label:"Nguồn dữ liệu"}]}/>{view==="overview"&&<Overview data={data} quotes={quotes} onPHP={()=>{setCompany("PHP");setView("company")}} onHarbor={()=>setView("haiphong")} onTerminal={()=>setView("terminal")}/>} {view==="haiphong"&&<HarborDashboard data={harbor}/>} {view==="company"&&<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>} {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} {view==="sources"&&<Sources data={data}/>}</div>;
+  return <div className="portIndustry"><ResponsiveTabBar<PortView> className="portSubTabs" ariaLabel="Cảng biển" activeId={view} onChange={setView} items={[{id:"overview",label:"Tổng quan"},{id:"haiphong",label:"Hải Phòng"},{id:"comparison",label:"So sánh DN"},{id:"company",label:"Doanh nghiệp"},{id:"terminal",label:"Terminal"},{id:"sources",label:"Nguồn dữ liệu"}]}/>{view==="overview"&&<Overview data={data} quotes={quotes} onPHP={()=>{setCompany("PHP");setView("company")}} onHarbor={()=>setView("haiphong")} onTerminal={()=>setView("terminal")}/>} {view==="haiphong"&&<><HarborDashboard data={harbor}/><HistoryProgress history={history}/></>} {view==="comparison"&&<ComparisonDashboard data={comparison} quotes={quotes}/>} {view==="company"&&<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>} {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} {view==="sources"&&<Sources data={data}/>}</div>;
 }
