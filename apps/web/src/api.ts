@@ -182,3 +182,9 @@ export async function getPortThroughputCapacity() {
   if(!r.ok) throw new Error(`Port throughput/capacity HTTP ${r.status}`);
   return r.json();
 }
+
+export async function getPortThroughputHistory() {
+  const r=await fetch(`${BASE}/api/industry/ports/throughput-history`,{cache:"no-store"});
+  if(!r.ok) throw new Error(`Port throughput history HTTP ${r.status}`);
+  return r.json();
+}

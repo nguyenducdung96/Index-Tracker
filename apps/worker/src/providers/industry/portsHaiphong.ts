@@ -11,7 +11,8 @@ import type {
   PortRelationship,
   PortHistoryStatus,
   PortCompanyComparison,
-  PortThroughputCapacityResponse
+  PortThroughputCapacityResponse,
+  PortThroughputHistoryResponse
 } from "../../types.js";
 
 const SOURCE_BASE = "https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx";
@@ -770,4 +771,220 @@ export function getPortThroughputCapacity(): PortThroughputCapacityResponse {
     {id:"VSC-CAP",companySymbol:"VSC",assetCode:"VSC_PORT_SYSTEM",assetLabel:"Viconship · hệ thống cảng công bố",region:"Hải Phòng",period:"Published capacity",throughputTeu:null,throughputKind:"DISCLOSED_RUN_RATE" as const,throughputLabel:"Actual TEU chưa có nguồn official cùng phạm vi",capacityTeu:1500000,capacityAsOf:"2023-06-15",utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Viconship – công bố quy mô công suất",sourceUrl:"https://one.viconship.com/vi/vsc-tai-cau-truc-toan-dien-dat-muc-tieu-tro-thanh-cong-ty-logistics-tam-co-khu-vuc-va-the-gioi",sourceDate:"2023-06-15",note:"Capacity 1,5 triệu TEU/năm là disclosure cấp hệ thống tại thời điểm nguồn; không ghép với throughput khác scope."}
   ];
   return {data,methodology:["Actual, Estimate và Target được tách nhãn; không chuyển kế hoạch thành số thực hiện.","Utilization chỉ tính khi throughput/capacity cùng asset, đơn vị và kỳ so sánh.","DWT/ship-call không được dùng để suy ra TEU.","Thiếu nguồn official tương thích => utilization để null/—."],serverTime:new Date().toISOString()};
+}
+
+
+/*
+ * V8.13 historical throughput + capacity timeline.
+ *
+ * Admission policy:
+ * - only official company / official port disclosures;
+ * - period/scope/unit are preserved;
+ * - actual, estimate and target are never merged;
+ * - no TEU is inferred from DWT;
+ * - no utilization is calculated across incompatible scopes.
+ */
+export function getPortThroughputHistory(): PortThroughputHistoryResponse {
+  const throughput = [
+    {
+      id:"PHP-2024-ACTUAL", companySymbol:"PHP", assetCode:"PHP_SYSTEM",
+      assetLabel:"Cảng Hải Phòng · hợp nhất", scope:"COMPANY_SYSTEM" as const,
+      period:"2024", periodOrder:"2024-12-31", unit:"TEU" as const, value:1846300,
+      kind:"ACTUAL" as const, yoyPct:2.3, yoyKind:"REPORTED" as const,
+      sourceLabel:"Cảng Hải Phòng – ĐHĐCĐ thường niên 2025",
+      sourceUrl:"https://haiphongport.com.vn/vi/san-xuat-kinh-doanh/cang-hai-phong-to-chuc-thanh-cong-dai-hoi-dong-co-dong-thuong-nien-nam-2025.html",
+      sourceDate:"2025-04-25",
+      note:"Sản lượng container hợp nhất năm 2024 đạt 1.846.300 TEU, tăng 2,3% YoY."
+    },
+    {
+      id:"PHP-2025-ACTUAL", companySymbol:"PHP", assetCode:"PHP_SYSTEM",
+      assetLabel:"Cảng Hải Phòng · hợp nhất", scope:"COMPANY_SYSTEM" as const,
+      period:"2025", periodOrder:"2025-12-31", unit:"TEU" as const, value:2072000,
+      kind:"ACTUAL" as const, yoyPct:12.3, yoyKind:"REPORTED" as const,
+      sourceLabel:"Cảng Hải Phòng – ĐHĐCĐ thường niên 2026",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/dai-hoi-dong-co-dong-thuong-nien-cang-hai-phong-nam-2026-khang-dinh-vi-the-dan-dau-kien-tao-dong-luc-phat-trien-moi.html",
+      sourceDate:"2026-04-28",
+      note:"Sản lượng container hợp nhất năm 2025 hơn 2,072 triệu TEU, tăng 12,3% YoY."
+    },
+    {
+      id:"PHP-H1-2026-ACTUAL", companySymbol:"PHP", assetCode:"PHP_SYSTEM",
+      assetLabel:"Cảng Hải Phòng · hợp nhất", scope:"COMPANY_SYSTEM" as const,
+      period:"H1 2026", periodOrder:"2026-06-30", unit:"TEU" as const, value:1220000,
+      kind:"ACTUAL" as const, yoyPct:31.5, yoyKind:"REPORTED" as const,
+      sourceLabel:"Cảng Hải Phòng – Sơ kết 6 tháng đầu năm 2026",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/dang-bo-cang-hai-phong-so-ket-cong-tac-6-thang-dau-nam-2026-giu-vung-vai-tro-hat-nhan-lanh-dao-tao-da-tang-truong-ben-vung.html",
+      sourceDate:"2026-07-21",
+      note:"Sản lượng container H1/2026 đạt 1,22 triệu TEU, tăng 31,5% YoY. Không annualize."
+    },
+    {
+      id:"PHP-MAY-2026-ACTUAL", companySymbol:"PHP", assetCode:"PHP_SYSTEM",
+      assetLabel:"Cảng Hải Phòng · hợp nhất", scope:"COMPANY_SYSTEM" as const,
+      period:"May 2026", periodOrder:"2026-05-31", unit:"TEU" as const, value:239000,
+      kind:"ACTUAL" as const, yoyPct:17.9, yoyKind:"REPORTED" as const,
+      sourceLabel:"Cảng Hải Phòng – giao ban tháng 5/2026",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/cang-hai-phong-duy-tri-da-tang-truong-khen-thuong-tap-the-ca-nhan-xuat-sac-thang-52026.html",
+      sourceDate:"2026-06-09",
+      note:"Sản lượng container riêng tháng 5/2026 đạt 239.000 TEU, tăng 17,9% YoY."
+    },
+    {
+      id:"TANVU-2025-EST", companySymbol:"PHP", assetCode:"TAN_VU",
+      assetLabel:"Cảng Tân Vũ", scope:"TERMINAL" as const,
+      period:"2025", periodOrder:"2025-12-31", unit:"TEU" as const, value:1100000,
+      kind:"ESTIMATE" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"Cảng Hải Phòng – Tân Vũ 17 năm",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/cang-tan-vu-17-nam-hanh-trinh-vuon-xa.html",
+      sourceDate:"2025-12-18",
+      note:"Nguồn doanh nghiệp dùng từ 'ước đạt'; giữ đúng nhãn ESTIMATE."
+    },
+    {
+      id:"HTIT-2026-TARGET", companySymbol:"PHP", assetCode:"HTIT",
+      assetLabel:"HTIT · Lạch Huyện 3–4", scope:"TERMINAL" as const,
+      period:"2026 target", periodOrder:"2026-12-31", unit:"TEU" as const, value:700000,
+      kind:"TARGET" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"Cảng Hải Phòng – cập nhật Bến 3,4 Lạch Huyện",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/ben-so-3-4-lach-huyen-tao-cu-hich-cang-hai-phong-php-tang-toc-voi-loat-du-an-moi.html",
+      sourceDate:"2026-07-01",
+      note:"Mục tiêu 2026, không phải actual throughput."
+    },
+    {
+      id:"DVP-2025-ACTUAL", companySymbol:"DVP", assetCode:"DINH_VU",
+      assetLabel:"Cảng Đình Vũ", scope:"TERMINAL" as const,
+      period:"2025", periodOrder:"2025-12-31", unit:"TEU" as const, value:513942,
+      kind:"ACTUAL" as const, yoyPct:-10.33, yoyKind:"REPORTED" as const,
+      sourceLabel:"DVP – Tờ trình kết quả SXKD 2025",
+      sourceUrl:"https://dinhvuport.com.vn/aj/Download.ashx?Key=885",
+      sourceDate:"2026-04-01",
+      note:"Sản lượng quy đổi 2025 = 513.942 TEU, bằng 89,67% năm 2024. App lưu YoY -10,33% theo tỷ lệ công bố; không tự suy ngược số 2024."
+    },
+    {
+      id:"HAH-PORT-2024-ACTUAL", companySymbol:"HAH", assetCode:"HAI_AN",
+      assetLabel:"Khai thác cảng Hải An", scope:"PORT_OPERATIONS" as const,
+      period:"2024", periodOrder:"2024-12-31", unit:"TEU" as const, value:549229,
+      kind:"ACTUAL" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"HAH – Báo cáo HĐQT trình ĐHĐCĐ 2025",
+      sourceUrl:"https://haiants.vn/files/Quan_he_co_dong/Tai-lieu-co-dong/2025/up-date-12-06/4-Bao-cao-Hoi-dong-quan-tri.pdf",
+      sourceDate:"2025-06-12",
+      note:"Chỉ tiêu 'Khai thác cảng' 2024, tách khỏi vận tải container và depot."
+    },
+    {
+      id:"HAH-PORT-2025-TARGET", companySymbol:"HAH", assetCode:"HAI_AN",
+      assetLabel:"Khai thác cảng Hải An", scope:"PORT_OPERATIONS" as const,
+      period:"2025 target", periodOrder:"2025-12-31", unit:"TEU" as const, value:588000,
+      kind:"TARGET" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"HAH – Nghị quyết/biên bản ĐHĐCĐ 2025",
+      sourceUrl:"https://haiants.vn/files/Quan_he_co_dong/Tai-lieu-co-dong/12-Draft-Minutes-and-Resolution-the-2025-General-Meeting-of-Shareholders.pdf",
+      sourceDate:"2025-06-26",
+      note:"Kế hoạch khai thác cảng 2025 = 588.000 TEU; không hiển thị như actual."
+    },
+    {
+      id:"GMD-9M-2025-ACTUAL", companySymbol:"GMD", assetCode:"GMD_PORT_SYSTEM",
+      assetLabel:"Hệ thống cảng Gemadept", scope:"COMPANY_SYSTEM" as const,
+      period:"9M 2025", periodOrder:"2025-09-30", unit:"TEU" as const, value:3700000,
+      kind:"ACTUAL" as const, yoyPct:16, yoyKind:"REPORTED" as const,
+      sourceLabel:"Gemadept – Top 10 Logistics 2025",
+      sourceUrl:"https://www.gemadept.com.vn/gemadept-4-don-vi-dong-loat-vao-top-10-cong-ty-uy-tin-ngang-logistics-2025/",
+      sourceDate:"2025-12-15",
+      note:"Tổng sản lượng thông qua hệ thống cảng Gemadept 9M/2025 = 3,7 triệu TEU, +16%."
+    },
+    {
+      id:"GMD-2025-ACTUAL", companySymbol:"GMD", assetCode:"GMD_PORT_SYSTEM",
+      assetLabel:"Hệ thống cảng Gemadept", scope:"COMPANY_SYSTEM" as const,
+      period:"2025", periodOrder:"2025-12-31", unit:"TEU" as const, value:5000000,
+      kind:"ACTUAL" as const, yoyPct:15, yoyKind:"REPORTED" as const,
+      sourceLabel:"Cảng Nam Đình Vũ / Gemadept – tổng kết 2025",
+      sourceUrl:"https://ndv.gemadept.com.vn/tap-doan-gemadept-va-hanh-trinh-kien-tao-ky-nguyen-hang-hai-moi/",
+      sourceDate:"2026-05-15",
+      note:"Nguồn ghi sản lượng năm 2025 'vượt ngưỡng 5 triệu TEU'. V8.13 lưu 5.000.000 như ngưỡng tối thiểu hiển thị; không dùng để tính utilization."
+    },
+    {
+      id:"DXP-2023-ACTUAL", companySymbol:"DXP", assetCode:"DOAN_XA",
+      assetLabel:"Cảng Đoạn Xá", scope:"TERMINAL" as const,
+      period:"2023", periodOrder:"2023-12-31", unit:"TONS" as const, value:1200760,
+      kind:"ACTUAL" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"DXP – Tài liệu ĐHĐCĐ 2024",
+      sourceUrl:"https://doanxaport.com.vn/upload/upload-old/uploads/Ch%C6%B0%C6%A1ng-tr%C3%ACnh-%C4%90%E1%BA%A1i-h%E1%BB%99i-%C4%91%E1%BB%93ng-c%E1%BB%95-%C4%91%C3%B4ng-C%C3%B4ng-ty-CP-C%E1%BA%A3ng-%C4%90o%E1%BA%A1n-X%C3%A1-n%C4%83m-2024_compressed.pdf",
+      sourceDate:"2024-04-25",
+      note:"DXP công bố sản lượng hàng hóa thông qua cảng 2023 theo TẤN, không quy đổi sang TEU."
+    },
+    {
+      id:"DXP-2024-TARGET", companySymbol:"DXP", assetCode:"DOAN_XA",
+      assetLabel:"Cảng Đoạn Xá", scope:"TERMINAL" as const,
+      period:"2024 target", periodOrder:"2024-12-31", unit:"TONS" as const, value:1133947,
+      kind:"TARGET" as const, yoyPct:null, yoyKind:"UNAVAILABLE" as const,
+      sourceLabel:"DXP – Nghị quyết ĐHĐCĐ 2024",
+      sourceUrl:"https://doanxaport.com.vn/Upload/file/nghi-quyet-dai-hoi-dong-co-dong-nam-2024.pdf",
+      sourceDate:"2024-04-25",
+      note:"Kế hoạch sản lượng hàng hóa qua cảng 2024, đơn vị TẤN; giữ nguyên đơn vị."
+    }
+  ];
+
+  const capacityTimeline = [
+    {
+      id:"HTIT-11M", companySymbol:"PHP", assetCode:"HTIT", assetLabel:"HTIT · Lạch Huyện 3–4",
+      effectiveFrom:"2025", effectiveTo:null, capacityTeu:1100000, comparator:"EQ" as const,
+      capacityKind:"DESIGN" as const,
+      sourceLabel:"Cảng Hải Phòng – hoàn thành Bến 3,4 Lạch Huyện",
+      sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/cang-hai-phong-gan-bien-hoan-thanh-hai-cau-cang-so-34-cang-cua-ngo-quoc-te-hai-phong-tai-lach-huyen.html",
+      sourceDate:"2025-05-13",
+      note:"Thiết kế đáp ứng sản lượng 1,1 triệu TEU/năm."
+    },
+    {
+      id:"NDV-P12", companySymbol:"GMD", assetCode:"NAM_DINH_VU", assetLabel:"Nam Đình Vũ · GĐ1+2",
+      effectiveFrom:null, effectiveTo:"2025-09-29", capacityTeu:1200000, comparator:"EQ" as const,
+      capacityKind:"DESIGN" as const,
+      sourceLabel:"Nam Đình Vũ – Trang thiết bị Giai đoạn 1 & 2",
+      sourceUrl:"https://ndv.gemadept.com.vn/gioi-thieu/trang-thiet-bi/",
+      sourceDate:"2025-05-01",
+      note:"Công suất thiết kế GĐ1+2 = 1,2 triệu TEU/năm."
+    },
+    {
+      id:"NDV-P123", companySymbol:"GMD", assetCode:"NAM_DINH_VU", assetLabel:"Nam Đình Vũ · sau GĐ3",
+      effectiveFrom:"2025-09-30", effectiveTo:null, capacityTeu:2000000, comparator:"GT" as const,
+      capacityKind:"DISCLOSED_OPERATING_CAPACITY" as const,
+      sourceLabel:"Gemadept – GĐ3 Nam Đình Vũ đi vào hoạt động",
+      sourceUrl:"https://www.gemadept.com.vn/gemadept-chinh-thuc-dua-giai-doan-3-cum-cang-nam-dinh-vu-vao-hoat-dong/",
+      sourceDate:"2025-10-07",
+      note:"Nguồn corporate ghi GĐ3 bổ sung khoảng 650.000 TEU/năm và đưa tổng công suất lên HƠN 2 triệu TEU/năm. App dùng comparator '>'."
+    },
+    {
+      id:"DVP-CAP", companySymbol:"DVP", assetCode:"DINH_VU", assetLabel:"Cảng Đình Vũ",
+      effectiveFrom:null, effectiveTo:null, capacityTeu:600000, comparator:"GT" as const,
+      capacityKind:"DISCLOSED_OPERATING_CAPACITY" as const,
+      sourceLabel:"DVP – website chính thức",
+      sourceUrl:"https://www.dinhvuport.com.vn/",
+      sourceDate:"2026-09-08",
+      note:"Website mô tả năng suất xếp dỡ 'trên 600.000 TEU/năm'; không coi 600.000 là design capacity chính xác."
+    }
+  ];
+
+  const actualPointCount = throughput.filter(x=>x.kind==="ACTUAL").length;
+  const estimatePointCount = throughput.filter(x=>x.kind==="ESTIMATE").length;
+  const targetPointCount = throughput.filter(x=>x.kind==="TARGET").length;
+
+  return {
+    throughput,
+    capacityTimeline,
+    coverage:{
+      companies:Array.from(new Set(throughput.map(x=>x.companySymbol))).sort(),
+      actualPointCount,
+      estimatePointCount,
+      targetPointCount,
+      capacityPointCount:capacityTimeline.length
+    },
+    methodology:[
+      "Mỗi điểm giữ nguyên scope (company system / port operations / terminal), kỳ và đơn vị từ nguồn chính thức.",
+      "ACTUAL, ESTIMATE và TARGET không được nối thành một chuỗi actual giả.",
+      "TEU và TONS không quy đổi qua lại.",
+      "YoY chỉ dùng số nguồn công bố hoặc phép tính trên hai actual point cùng scope; V8.13 ưu tiên YoY nguồn công bố.",
+      "Capacity timeline có effective date/comparator; dấu '>' được giữ khi nguồn chỉ nói 'hơn'."
+    ],
+    limitations:[
+      "Chưa có official/free feed terminal-level actual TEU đồng nhất cho VSC, Nam Đình Vũ, DXP và toàn bộ terminal Hải Phòng.",
+      "Gemadept công bố actual hệ thống cảng, không đồng nghĩa actual riêng Nam Đình Vũ.",
+      "DVP công bố capacity theo mô tả 'trên 600.000 TEU/năm', nên không tự tính utilization chính xác.",
+      "DXP dùng tấn cho sản lượng hàng hóa qua cảng; không đổi sang TEU.",
+      "Capacity Nam Đình Vũ có nhiều cách diễn đạt trong nguồn chính thức; V8.13 lưu 1,2m trước GĐ3 và '>2m' sau 30/09/2025 theo disclosure corporate, không tự cộng thành 2,2m."
+    ],
+    serverTime:new Date().toISOString()
+  };
 }

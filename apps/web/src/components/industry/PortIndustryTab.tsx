@@ -13,11 +13,12 @@ import {
   getPortCompanyComparison,
   getPortRelationships,
   getPortHistoryStatus,
-  getPortThroughputCapacity
+  getPortThroughputCapacity,
+  getPortThroughputHistory
 } from "../../api";
 import type {
   PortCompany, PortCompanyIntelligence, PortHarborSummary, PortMetric, PortOverviewResponse,
-  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse
+  PortTerminalAnalytics, StockQuote, PortCompanyComparison, PortRelationship, PortHistoryStatus, PortThroughputCapacityResponse, PortThroughputHistoryResponse, PortThroughputHistoryPoint
 } from "../../types";
 import { ResponsiveTabBar } from "../ResponsiveTabBar";
 
@@ -49,7 +50,7 @@ function MiniDailyChart({rows}:{rows:Array<{date:string;dwt:number}>}){
 function Overview({data,quotes,onPHP,onHarbor,onTerminal}:{data:PortOverviewResponse;quotes:StockQuote[];onPHP:()=>void;onHarbor:()=>void;onTerminal:()=>void}){
   const m=metricMap(data.metrics); const cards=[m.get("php-throughput-2025"),m.get("php-teu-2025"),m.get("php-revenue-2025"),m.get("php-pbt-2025")].filter(Boolean) as PortMetric[];
   return <>
-    <section className="portHero portPanel"><div><span className="portEyebrow">INDUSTRY ENGINE · PORTS · V8.12</span><h2>Cảng biển Việt Nam</h2><p>V8.10 kết hợp ship-call/DWT chính thức với lớp Company Intelligence, YoY và capacity registry có kiểm soát. DWT được dùng như proxy quy mô tàu, không phải sản lượng hàng thực tế.</p></div><div className="portHeroActions"><button onClick={onHarbor}>Hải Phòng live</button><button onClick={onPHP}>PHP</button><button onClick={onTerminal}>Terminal</button></div></section>
+    <section className="portHero portPanel"><div><span className="portEyebrow">INDUSTRY ENGINE · PORTS · V8.13</span><h2>Cảng biển Việt Nam</h2><p>V8.10 kết hợp ship-call/DWT chính thức với lớp Company Intelligence, YoY và capacity registry có kiểm soát. DWT được dùng như proxy quy mô tàu, không phải sản lượng hàng thực tế.</p></div><div className="portHeroActions"><button onClick={onHarbor}>Hải Phòng live</button><button onClick={onPHP}>PHP</button><button onClick={onTerminal}>Terminal</button></div></section>
     <div className="portScopeNotice"><strong>Data policy:</strong> ship-call dùng <b>tàu vào cảng</b> làm convention chính để tránh cộng đôi arrival + departure. Nguồn được gắn trạng thái <b>planned-movement</b>.</div>
     <div className="portKpiGrid">{cards.map(x=><article className="portKpiCard" key={x.id}><span>{x.label}</span><strong>{fmt(x.value)} <em>{x.unit}</em></strong><small>{x.period}{x.yoyPct!=null?` · ${x.yoyPct>0?"+":""}${x.yoyPct.toFixed(1)}% YoY`:""}</small><SourceChip sourceId={x.sourceId} data={data}/></article>)}</div>
     <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">01</span><h3>Cổ phiếu cảng theo dõi</h3></div><span className="portMuted">VNDIRECT Stock Engine</span></div><StockStrip quotes={quotes}/></section>
@@ -105,10 +106,65 @@ function CompanyDashboard({symbol,setSymbol,options,data,quote}:{symbol:string;s
 
 
 
+
+function historyKindClass(kind:string){return kind==="ACTUAL"?"actual":kind==="ESTIMATE"?"estimate":"target"}
+function unitLabel(x:PortThroughputHistoryPoint){return x.unit==="TEU"?"TEU":"tấn"}
+
+function ThroughputHistoryPanel({data}:{data:PortThroughputHistoryResponse|null}) {
+  const [filter,setFilter]=useState("ALL");
+  if(!data)return <section className="portPanel">Đang tải historical throughput…</section>;
+  const companies=["ALL",...data.coverage.companies];
+  const rows=data.throughput.filter(x=>filter==="ALL"||x.companySymbol===filter)
+    .slice().sort((a,b)=>b.periodOrder.localeCompare(a.periodOrder));
+
+  return <>
+    <section className="portPanel">
+      <div className="portSectionHead">
+        <div><span className="portSectionIndex">HIS</span><h3>Historical Throughput Registry</h3></div>
+        <span className="portMuted">{data.coverage.actualPointCount} actual · {data.coverage.estimatePointCount} estimate · {data.coverage.targetPointCount} target</span>
+      </div>
+      <div className="portHistoryFilter">{companies.map(x=><button key={x} className={filter===x?"active":""} onClick={()=>setFilter(x)}>{x==="ALL"?"Tất cả":x}</button>)}</div>
+      <div className="portHistoryRegistry">
+        {rows.map(x=><article key={x.id}>
+          <div className="portHistoryMain">
+            <div><b>{x.companySymbol}</b><strong>{x.assetLabel}</strong><span>{x.scope.replace(/_/g," ")}</span></div>
+            <em className={`portDataKind ${historyKindClass(x.kind)}`}>{x.kind}</em>
+          </div>
+          <div className="portHistoryNumbers">
+            <div><span>PERIOD</span><strong>{x.period}</strong></div>
+            <div><span>THROUGHPUT</span><strong>{fmtCompact(x.value)} {unitLabel(x)}</strong></div>
+            <div><span>YOY</span><strong className={x.yoyPct==null?"ref":stockClass(x.yoyPct)}>{x.yoyPct==null?"—":`${x.yoyPct>0?"+":""}${x.yoyPct.toFixed(1)}%`}</strong></div>
+          </div>
+          <p>{x.note}</p>
+          <a href={x.sourceUrl} target="_blank" rel="noreferrer">{x.sourceLabel} ↗</a>
+        </article>)}
+      </div>
+    </section>
+
+    <section className="portPanel">
+      <div className="portSectionHead"><div><span className="portSectionIndex">CAP</span><h3>Capacity Timeline</h3></div><span className="portMuted">Effective-date aware</span></div>
+      <div className="portCapacityTimeline">
+        {data.capacityTimeline.map(x=><article key={x.id}>
+          <div><b>{x.companySymbol}</b><strong>{x.assetLabel}</strong></div>
+          <div className="portCapacityValue"><span>{x.comparator==="GT"?">":x.comparator==="GTE"?"≥":""}</span><b>{fmtCompact(x.capacityTeu)} TEU/y</b></div>
+          <small>{x.effectiveFrom??"start —"} → {x.effectiveTo??"current"}</small>
+          <p>{x.note}</p>
+          <a href={x.sourceUrl} target="_blank" rel="noreferrer">Nguồn chính thức ↗</a>
+        </article>)}
+      </div>
+    </section>
+
+    <section className="portPanel portLimitPanel">
+      <div className="portSectionHead"><div><span className="portSectionIndex">!</span><h3>Coverage & limitations</h3></div></div>
+      <ul>{data.limitations.map(x=><li key={x}>{x}</li>)}</ul>
+    </section>
+  </>;
+}
+
 function ThroughputCapacityDashboard({data}:{data:PortThroughputCapacityResponse|null}) {
   if(!data)return <div className="portPanel">Đang tải throughput/capacity…</div>;
   const kind=(x:string)=>x==="ACTUAL"?"Actual":x==="ESTIMATE"?"Estimate":x==="TARGET"?"Target":"Disclosure";
-  return <><section className="portPanel portEntityHero"><div><span className="portEyebrow">V8.12 · ACTUAL THROUGHPUT + CAPACITY</span><h2>Throughput & Capacity</h2><p>Chỉ dùng disclosure chính thức. Actual / Estimate / Target tách riêng; utilization không suy từ DWT hoặc ghép số khác phạm vi.</p></div></section>
+  return <><section className="portPanel portEntityHero"><div><span className="portEyebrow">V8.13 · HISTORICAL THROUGHPUT + CAPACITY TIMELINE</span><h2>Throughput & Capacity</h2><p>Chỉ dùng disclosure chính thức. Actual / Estimate / Target tách riêng; utilization không suy từ DWT hoặc ghép số khác phạm vi.</p></div></section>
   <div className="portThroughputGrid">{data.data.map(x=><article className="portThroughputCard" key={x.id}><div className="portThroughputHead"><div><b>{x.companySymbol}</b><strong>{x.assetLabel}</strong><span>{x.region} · {x.period}</span></div><em className={`portDataKind ${x.throughputKind.toLowerCase()}`}>{kind(x.throughputKind)}</em></div><div className="portThroughputMetrics"><div><span>THROUGHPUT</span><strong>{x.throughputTeu==null?"—":`${fmtCompact(x.throughputTeu)} TEU`}</strong><small>{x.throughputLabel}</small></div><div><span>CAPACITY</span><strong>{x.capacityTeu==null?"—":`${fmtCompact(x.capacityTeu)} TEU/y`}</strong><small>{x.capacityAsOf?`as of ${x.capacityAsOf}`:"chưa đủ nguồn cùng scope"}</small></div><div><span>UTILIZATION</span><strong>{x.utilizationPct==null?"—":`${x.utilizationPct.toFixed(1)}%`}</strong><small>{x.utilizationKind==="UNAVAILABLE"?"không suy đoán":`${x.utilizationKind.toLowerCase()} utilization`}</small></div></div><p>{x.note}</p><a href={x.sourceUrl} target="_blank" rel="noreferrer">{x.sourceLabel} ↗</a></article>)}</div>
   <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">M</span><h3>Methodology guardrails</h3></div></div><div className="portMethodList">{data.methodology.map((x,i)=><div key={i}><b>{i+1}</b><span>{x}</span></div>)}</div></section></>;
 }
@@ -208,15 +264,15 @@ function HistoryProgress({history}:{history:PortHistoryStatus|null}) {
 function Sources({data}:{data:PortOverviewResponse}){return <section className="portPanel"><div className="portSectionHead"><div><span className="portSectionIndex">SRC</span><h3>Nguồn dữ liệu & trạng thái</h3></div></div><div className="portSourceList">{data.sources.map(src=><a key={src.id} href={src.url} target="_blank" rel="noreferrer"><strong>{src.label}</strong><span>{src.organization} · {src.coverage}</span><small>{src.updateCadence}{src.note?` · ${src.note}`:""}</small><em className={`sourceState ${src.status}`}>{src.status}</em></a>)}<a href="https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx?d=0" target="_blank" rel="noreferrer"><strong>CSDL kế hoạch điều động tàu Hải Phòng</strong><span>Cảng vụ Hàng hải Hải Phòng · tàu vào/rời/di chuyển + DWT/LOA/mớn nước/tuyến/đại lý</span><small>V8.10 collector · 4 giờ/lần</small><em className="sourceState tracked">tracked</em></a></div></section>}
 
 export function PortIndustryTab(){
-  const [view,setView]=useState<PortView>("overview"); const [data,setData]=useState<PortOverviewResponse|null>(null); const [quotes,setQuotes]=useState<StockQuote[]>([]); const [harbor,setHarbor]=useState<PortHarborSummary|null>(null); const [terminal,setTerminal]=useState("HTIT"); const [terminalData,setTerminalData]=useState<PortTerminalAnalytics|null>(null); const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]); const [company,setCompany]=useState("PHP"); const [companyData,setCompanyData]=useState<PortCompanyIntelligence|null>(null); const [comparison,setComparison]=useState<PortCompanyComparison|null>(null); const [relationships,setRelationships]=useState<PortRelationship[]>([]); const [history,setHistory]=useState<PortHistoryStatus|null>(null); const [throughput,setThroughput]=useState<PortThroughputCapacityResponse|null>(null); const [companyOptions,setCompanyOptions]=useState<Array<{symbol:string;name:string}>>([{symbol:"PHP",name:"Cảng Hải Phòng"},{symbol:"GMD",name:"Gemadept"}]); const [error,setError]=useState<string|null>(null);
+  const [view,setView]=useState<PortView>("overview"); const [data,setData]=useState<PortOverviewResponse|null>(null); const [quotes,setQuotes]=useState<StockQuote[]>([]); const [harbor,setHarbor]=useState<PortHarborSummary|null>(null); const [terminal,setTerminal]=useState("HTIT"); const [terminalData,setTerminalData]=useState<PortTerminalAnalytics|null>(null); const [terminalOptions,setTerminalOptions]=useState<Array<{code:string;label:string}>>([{code:"HTIT",label:"HTIT · Lạch Huyện 3–4"}]); const [company,setCompany]=useState("PHP"); const [companyData,setCompanyData]=useState<PortCompanyIntelligence|null>(null); const [comparison,setComparison]=useState<PortCompanyComparison|null>(null); const [relationships,setRelationships]=useState<PortRelationship[]>([]); const [history,setHistory]=useState<PortHistoryStatus|null>(null); const [throughput,setThroughput]=useState<PortThroughputCapacityResponse|null>(null); const [throughputHistory,setThroughputHistory]=useState<PortThroughputHistoryResponse|null>(null); const [companyOptions,setCompanyOptions]=useState<Array<{symbol:string;name:string}>>([{symbol:"PHP",name:"Cảng Hải Phòng"},{symbol:"GMD",name:"Gemadept"}]); const [error,setError]=useState<string|null>(null);
   useEffect(()=>{getPortOverview().then(setData).catch(e=>setError(String(e))); getTrackedPortTerminals().then(r=>setTerminalOptions(r.data??[])).catch(()=>undefined); getPortCompanies().then(r=>setCompanyOptions(r.data??[])).catch(()=>undefined); const load=()=>getStockQuotes(["PHP","DVP","DXP","GMD","VSC","PDN","HAH"]).then(r=>setQuotes(r.data??[])).catch(()=>undefined);load();const t=window.setInterval(()=>{if(!document.hidden)load()},5000);return()=>window.clearInterval(t)},[]);
   useEffect(()=>{if(view==="haiphong")getPortHaiphongSummary(30).then(setHarbor).catch(e=>setError(String(e)))},[view]);
   useEffect(()=>{if(view==="terminal"){setTerminalData(null);getPortTerminalAnalytics(terminal,90,24).then(setTerminalData).catch(e=>setError(String(e)))}},[view,terminal]);
   useEffect(()=>{if(view==="company"){setCompanyData(null);Promise.all([getPortCompanyIntelligence(company,90,24),getPortRelationships(company)]).then(([d,r])=>{setCompanyData({...d,relationships:r.data??[]} as any);setRelationships(r.data??[])}).catch(e=>setError(String(e)))}},[view,company]);
   useEffect(()=>{if(view==="comparison"){setComparison(null);getPortCompanyComparison(90,24).then(setComparison).catch(e=>setError(String(e)))}},[view]);
-  useEffect(()=>{if(view==="throughput"){setThroughput(null);getPortThroughputCapacity().then(setThroughput).catch(e=>setError(String(e)))}},[view]);
+  useEffect(()=>{if(view==="throughput"){setThroughput(null);setThroughputHistory(null);Promise.all([getPortThroughputCapacity(),getPortThroughputHistory()]).then(([a,b])=>{setThroughput(a);setThroughputHistory(b)}).catch(e=>setError(String(e)))}},[view]);
   useEffect(()=>{if(view==="haiphong"){getPortHistoryStatus().then(setHistory).catch(()=>undefined)}},[view]);
   const companyQuote=useMemo(()=>quotes.find(x=>x.code===company),[quotes,company]);
   if(error)return <div className="portPanel">Port Industry error: {error}</div>; if(!data)return <div className="portPanel">Đang tải Port Industry…</div>;
-  return <div className="portIndustry"><ResponsiveTabBar<PortView> className="portSubTabs" ariaLabel="Cảng biển" activeId={view} onChange={setView} items={[{id:"overview",label:"Tổng quan"},{id:"haiphong",label:"Hải Phòng"},{id:"throughput",label:"Throughput"},{id:"comparison",label:"So sánh DN"},{id:"company",label:"Doanh nghiệp"},{id:"terminal",label:"Terminal"},{id:"sources",label:"Nguồn dữ liệu"}]}/>{view==="overview"&&<Overview data={data} quotes={quotes} onPHP={()=>{setCompany("PHP");setView("company")}} onHarbor={()=>setView("haiphong")} onTerminal={()=>setView("terminal")}/>} {view==="haiphong"&&<><HarborDashboard data={harbor}/><HistoryProgress history={history}/></>} {view==="throughput"&&<ThroughputCapacityDashboard data={throughput}/>} {view==="comparison"&&<ComparisonDashboard data={comparison} quotes={quotes}/>} {view==="company"&&<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>} {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} {view==="sources"&&<Sources data={data}/>}</div>;
+  return <div className="portIndustry"><ResponsiveTabBar<PortView> className="portSubTabs" ariaLabel="Cảng biển" activeId={view} onChange={setView} items={[{id:"overview",label:"Tổng quan"},{id:"haiphong",label:"Hải Phòng"},{id:"throughput",label:"Throughput"},{id:"comparison",label:"So sánh DN"},{id:"company",label:"Doanh nghiệp"},{id:"terminal",label:"Terminal"},{id:"sources",label:"Nguồn dữ liệu"}]}/>{view==="overview"&&<Overview data={data} quotes={quotes} onPHP={()=>{setCompany("PHP");setView("company")}} onHarbor={()=>setView("haiphong")} onTerminal={()=>setView("terminal")}/>} {view==="haiphong"&&<><HarborDashboard data={harbor}/><HistoryProgress history={history}/></>} {view==="throughput"&&<><ThroughputCapacityDashboard data={throughput}/><ThroughputHistoryPanel data={throughputHistory}/></>} {view==="comparison"&&<ComparisonDashboard data={comparison} quotes={quotes}/>} {view==="company"&&<CompanyDashboard symbol={company} setSymbol={setCompany} options={companyOptions} data={companyData} quote={companyQuote}/>} {view==="terminal"&&<TerminalDashboard terminal={terminal} setTerminal={setTerminal} terminalOptions={terminalOptions} data={terminalData}/>} {view==="sources"&&<Sources data={data}/>}</div>;
 }

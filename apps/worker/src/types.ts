@@ -382,3 +382,58 @@ export type PortThroughputCapacityRow = {
 export type PortThroughputCapacityResponse = {
   data:PortThroughputCapacityRow[]; methodology:string[]; serverTime:string;
 };
+
+
+export type PortMetricUnit = "TEU" | "TONS";
+export type PortHistoryKind = "ACTUAL" | "ESTIMATE" | "TARGET";
+export type PortScopeKind = "COMPANY_SYSTEM" | "PORT_OPERATIONS" | "TERMINAL" | "PORT_CLUSTER";
+
+export type PortThroughputHistoryPoint = {
+  id:string;
+  companySymbol:string;
+  assetCode:string;
+  assetLabel:string;
+  scope:PortScopeKind;
+  period:string;
+  periodOrder:string;
+  unit:PortMetricUnit;
+  value:number;
+  kind:PortHistoryKind;
+  yoyPct:number|null;
+  yoyKind:"REPORTED"|"DERIVED"|"UNAVAILABLE";
+  sourceLabel:string;
+  sourceUrl:string;
+  sourceDate:string|null;
+  note:string;
+};
+
+export type PortCapacityTimelinePoint = {
+  id:string;
+  companySymbol:string;
+  assetCode:string;
+  assetLabel:string;
+  effectiveFrom:string|null;
+  effectiveTo:string|null;
+  capacityTeu:number;
+  comparator:"EQ"|"GT"|"GTE";
+  capacityKind:"DESIGN"|"DISCLOSED_OPERATING_CAPACITY";
+  sourceLabel:string;
+  sourceUrl:string;
+  sourceDate:string|null;
+  note:string;
+};
+
+export type PortThroughputHistoryResponse = {
+  throughput:PortThroughputHistoryPoint[];
+  capacityTimeline:PortCapacityTimelinePoint[];
+  coverage:{
+    companies:string[];
+    actualPointCount:number;
+    estimatePointCount:number;
+    targetPointCount:number;
+    capacityPointCount:number;
+  };
+  methodology:string[];
+  limitations:string[];
+  serverTime:string;
+};

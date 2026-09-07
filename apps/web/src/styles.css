@@ -2468,3 +2468,26 @@ footer,
 }
 
 .portThroughputGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.portThroughputCard{border:1px solid #17384f;background:#091b2a;border-radius:12px;padding:12px;display:grid;gap:10px}.portThroughputHead{display:flex;justify-content:space-between;gap:10px}.portThroughputHead>div{display:grid;gap:2px}.portThroughputHead b{color:#35d8c7;font-size:15px}.portThroughputHead strong{font-size:10px}.portThroughputHead span{color:#718da5;font-size:7px}.portDataKind{font-style:normal;border:1px solid #2b5068;border-radius:999px;padding:4px 7px;height:fit-content;font-size:7px;text-transform:uppercase}.portDataKind.actual{color:#42d392}.portDataKind.estimate{color:#f2c94c}.portDataKind.target{color:#c792ea}.portDataKind.disclosed_run_rate{color:#55cfff}.portThroughputMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.portThroughputMetrics>div{border:1px solid #17354d;border-radius:9px;padding:8px;display:grid;gap:3px;min-width:0}.portThroughputMetrics span{font-size:6px;color:#66869f}.portThroughputMetrics strong{font-size:11px;overflow-wrap:anywhere}.portThroughputMetrics small{font-size:6px;color:#718da5}.portThroughputCard p{margin:0;color:#829db4;font-size:8px;line-height:1.5}.portThroughputCard a{font-size:7px;color:#55cfff;text-decoration:none}.portMethodList{display:grid;gap:7px}.portMethodList>div{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start}.portMethodList b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#102d42;color:#35d8c7;font-size:8px}.portMethodList span{font-size:8px;color:#8aa4b9;line-height:1.5}@media(max-width:760px){.portThroughputGrid{grid-template-columns:1fr}.portThroughputMetrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.portThroughputMetrics>div{padding:7px 5px}.portThroughputMetrics strong{font-size:9px}}
+
+
+/* ==========================================================
+   V8.13 — HISTORICAL THROUGHPUT + CAPACITY TIMELINE
+   ========================================================== */
+.portHistoryFilter{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:thin}
+.portHistoryFilter button{flex:0 0 auto;border:1px solid #21445d;background:#0a1d2e;color:#7898b1;border-radius:999px;padding:5px 9px;font-size:7px;cursor:pointer}
+.portHistoryFilter button.active{border-color:#35d8c7;color:#35d8c7;background:rgba(53,216,199,.06)}
+.portHistoryRegistry{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.portHistoryRegistry article{border:1px solid #19384f;border-radius:11px;background:#091b2a;padding:10px;display:grid;gap:8px;min-width:0}
+.portHistoryMain{display:flex;justify-content:space-between;gap:8px}
+.portHistoryMain>div{display:grid;grid-template-columns:auto 1fr;gap:2px 7px;min-width:0}
+.portHistoryMain b{color:#35d8c7;font-size:13px}.portHistoryMain strong{font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.portHistoryMain span{grid-column:2;color:#66869f;font-size:6px}
+.portHistoryNumbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.portHistoryNumbers>div{border:1px solid #16344b;border-radius:8px;padding:6px;display:grid;gap:2px;min-width:0}
+.portHistoryNumbers span{font-size:6px;color:#607f99}.portHistoryNumbers strong{font-size:9px;overflow-wrap:anywhere}
+.portHistoryRegistry p{margin:0;color:#7f9ab1;font-size:7px;line-height:1.45}.portHistoryRegistry a{color:#55cfff;font-size:7px;text-decoration:none}
+.portCapacityTimeline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.portCapacityTimeline article{border-left:3px solid #35d8c7;border-top:1px solid #17364d;border-right:1px solid #17364d;border-bottom:1px solid #17364d;border-radius:9px;background:#091b2a;padding:10px;display:grid;grid-template-columns:1fr auto;gap:5px 10px}
+.portCapacityTimeline article>div:first-child{display:grid;gap:2px}.portCapacityTimeline article>div:first-child b{color:#35d8c7;font-size:9px}.portCapacityTimeline article>div:first-child strong{font-size:9px}
+.portCapacityValue{display:flex;align-items:baseline;gap:2px}.portCapacityValue span{color:#f2c94c;font-size:11px}.portCapacityValue b{font-size:12px}
+.portCapacityTimeline small{grid-column:1/-1;color:#66869f;font-size:7px}.portCapacityTimeline p{grid-column:1/-1;margin:0;color:#819bb1;font-size:7px;line-height:1.45}.portCapacityTimeline a{grid-column:1/-1;color:#55cfff;font-size:7px;text-decoration:none}
+@media(max-width:760px){.portHistoryRegistry,.portCapacityTimeline{grid-template-columns:1fr}.portHistoryNumbers{grid-template-columns:repeat(3,minmax(0,1fr))}.portHistoryNumbers strong{font-size:8px}}
