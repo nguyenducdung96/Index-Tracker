@@ -10,7 +10,8 @@ import type {
   PortCompanyIntelligence,
   PortRelationship,
   PortHistoryStatus,
-  PortCompanyComparison
+  PortCompanyComparison,
+  PortThroughputCapacityResponse
 } from "../../types.js";
 
 const SOURCE_BASE = "https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx";
@@ -757,4 +758,16 @@ export async function getPortCompanyComparison(db:D1Database, days=90, months=24
     note:"Không gọi đây là thị phần ngành. Đây là tỷ trọng DWT arrival proxy trong tập terminal đã xác minh và không chồng lặp giữa các doanh nghiệp.",
     serverTime:new Date().toISOString()
   };
+}
+
+export function getPortThroughputCapacity(): PortThroughputCapacityResponse {
+  const data = [
+    {id:"PHP-2025",companySymbol:"PHP",assetCode:"PHP_SYSTEM",assetLabel:"Cảng Hải Phòng · hợp nhất",region:"Hải Phòng",period:"2025",throughputTeu:2072000,throughputKind:"ACTUAL" as const,throughputLabel:"Container thông qua 2025",capacityTeu:null,capacityAsOf:null,utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Cảng Hải Phòng – ĐHĐCĐ 2026",sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/dai-hoi-dong-co-dong-thuong-nien-cang-hai-phong-nam-2026-khang-dinh-vi-the-dan-dau-kien-tao-dong-luc-phat-trien-moi.html",sourceDate:"2026-04-28",note:"Actual 2025 >2,072 triệu TEU, +12,3% YoY. Không tính utilization vì chưa có capacity hợp nhất cùng phạm vi."},
+    {id:"PHP-H1-2026",companySymbol:"PHP",assetCode:"PHP_SYSTEM",assetLabel:"Cảng Hải Phòng · hợp nhất",region:"Hải Phòng",period:"H1 2026",throughputTeu:1220000,throughputKind:"ACTUAL" as const,throughputLabel:"Container H1 2026",capacityTeu:null,capacityAsOf:null,utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Cảng Hải Phòng – Sơ kết 6T2026",sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/dang-bo-cang-hai-phong-so-ket-cong-tac-6-thang-dau-nam-2026-giu-vung-vai-tro-hat-nhan-lanh-dao-tao-da-tang-truong-ben-vung.html",sourceDate:"2026-07-21",note:"Actual H1 2026 = 1,22 triệu TEU, +31,5% YoY. Không annualize tự động."},
+    {id:"TANVU-2025",companySymbol:"PHP",assetCode:"TAN_VU",assetLabel:"Cảng Tân Vũ",region:"Hải Phòng",period:"2025",throughputTeu:1100000,throughputKind:"ESTIMATE" as const,throughputLabel:"Sản lượng ước 2025",capacityTeu:null,capacityAsOf:null,utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Cảng Hải Phòng – Tân Vũ 17 năm",sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/cang-tan-vu-17-nam-hanh-trinh-vuon-xa.html",sourceDate:"2025-12-18",note:"Nguồn doanh nghiệp ghi ước đạt 1,1 triệu TEU; giữ đúng nhãn Estimate."},
+    {id:"HTIT-2026",companySymbol:"PHP",assetCode:"HTIT",assetLabel:"HTIT · Lạch Huyện 3–4",region:"Hải Phòng",period:"2026 target",throughputTeu:700000,throughputKind:"TARGET" as const,throughputLabel:"Mục tiêu sản lượng 2026",capacityTeu:1100000,capacityAsOf:"2026-07-01",utilizationPct:63.6,utilizationKind:"TARGET" as const,status:"Latest" as const,sourceLabel:"Cảng Hải Phòng – Bến 3,4 Lạch Huyện",sourceUrl:"https://haiphongport.com.vn/vi/tin-tuc/ben-so-3-4-lach-huyen-tao-cu-hich-cang-hai-phong-php-tang-toc-voi-loat-du-an-moi.html",sourceDate:"2026-07-01",note:"63,6% = target/capacity (700k/1,1m), KHÔNG phải actual utilization."},
+    {id:"NDV-CAP",companySymbol:"GMD",assetCode:"NAM_DINH_VU",assetLabel:"Cụm cảng Nam Đình Vũ",region:"Hải Phòng",period:"Current capacity",throughputTeu:null,throughputKind:"DISCLOSED_RUN_RATE" as const,throughputLabel:"Actual annual TEU chưa có disclosure đủ chuẩn",capacityTeu:2000000,capacityAsOf:"2025-09-30",utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Gemadept – Nam Đình Vũ GĐ3",sourceUrl:"https://www.gemadept.com.vn/gemadept-chinh-thuc-dua-giai-doan-3-cum-cang-nam-dinh-vu-vao-hoat-dong/",sourceDate:"2025-10-07",note:"GĐ3 vận hành từ 30/09/2025, tổng công suất hơn 2 triệu TEU/năm. Không dùng kế hoạch 2025 làm actual."},
+    {id:"VSC-CAP",companySymbol:"VSC",assetCode:"VSC_PORT_SYSTEM",assetLabel:"Viconship · hệ thống cảng công bố",region:"Hải Phòng",period:"Published capacity",throughputTeu:null,throughputKind:"DISCLOSED_RUN_RATE" as const,throughputLabel:"Actual TEU chưa có nguồn official cùng phạm vi",capacityTeu:1500000,capacityAsOf:"2023-06-15",utilizationPct:null,utilizationKind:"UNAVAILABLE" as const,status:"Latest" as const,sourceLabel:"Viconship – công bố quy mô công suất",sourceUrl:"https://one.viconship.com/vi/vsc-tai-cau-truc-toan-dien-dat-muc-tieu-tro-thanh-cong-ty-logistics-tam-co-khu-vuc-va-the-gioi",sourceDate:"2023-06-15",note:"Capacity 1,5 triệu TEU/năm là disclosure cấp hệ thống tại thời điểm nguồn; không ghép với throughput khác scope."}
+  ];
+  return {data,methodology:["Actual, Estimate và Target được tách nhãn; không chuyển kế hoạch thành số thực hiện.","Utilization chỉ tính khi throughput/capacity cùng asset, đơn vị và kỳ so sánh.","DWT/ship-call không được dùng để suy ra TEU.","Thiếu nguồn official tương thích => utilization để null/—."],serverTime:new Date().toISOString()};
 }

@@ -24,7 +24,8 @@ import {
   getPortCompanyIntelligence,
   getPortRelationships,
   getPortCompanyComparison,
-  getPortHistoryStatus
+  getPortHistoryStatus,
+  getPortThroughputCapacity
 } from "./providers/industry/portsHaiphong.js";
 import {
   addWatchlistSymbol,
@@ -318,6 +319,10 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
   if (url.pathname === "/api/industry/ports/history-status") {
     return json(await getPortHistoryStatus(env.DB));
   }
+  if (url.pathname === "/api/industry/ports/throughput-capacity") {
+    return json(getPortThroughputCapacity());
+  }
+
 
   if (url.pathname === "/api/industry/ports/relationships") {
     return json(getPortRelationships(url.searchParams.get("symbol") ?? undefined));

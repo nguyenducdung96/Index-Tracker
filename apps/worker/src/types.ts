@@ -369,3 +369,16 @@ export type PortCompanyComparison = {
   note: string;
   serverTime: string;
 };
+
+
+export type PortThroughputKind = "ACTUAL" | "ESTIMATE" | "TARGET" | "DISCLOSED_RUN_RATE";
+export type PortThroughputCapacityRow = {
+  id:string; companySymbol:string; assetCode:string; assetLabel:string; region:string; period:string;
+  throughputTeu:number|null; throughputKind:PortThroughputKind; throughputLabel:string;
+  capacityTeu:number|null; capacityAsOf:string|null; utilizationPct:number|null;
+  utilizationKind:"ACTUAL"|"ESTIMATE"|"TARGET"|"UNAVAILABLE"; status:"Latest"|"Unavailable";
+  sourceLabel:string; sourceUrl:string; sourceDate:string|null; note:string;
+};
+export type PortThroughputCapacityResponse = {
+  data:PortThroughputCapacityRow[]; methodology:string[]; serverTime:string;
+};

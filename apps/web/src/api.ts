@@ -176,3 +176,9 @@ export async function getPortCompanyComparison(days=90, months=24) {
   if (!r.ok) throw new Error(`Port company comparison HTTP ${r.status}`);
   return r.json();
 }
+
+export async function getPortThroughputCapacity() {
+  const r=await fetch(`${BASE}/api/industry/ports/throughput-capacity`,{cache:"no-store"});
+  if(!r.ok) throw new Error(`Port throughput/capacity HTTP ${r.status}`);
+  return r.json();
+}
