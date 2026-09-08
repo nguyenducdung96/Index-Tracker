@@ -23,7 +23,7 @@ export async function getNationalPortStats():Promise<NationalPortStatsResponse>{
     }
     if(!rows.length) throw new Error("VIMAWA table format not recognized");
     const sum=(k:keyof NationalPortAuthorityStat)=>rows.reduce((a,x)=>a+(typeof x[k]==="number"?(x[k] as number):0),0);
-    return {provider:"VIMAWA",sourceUrl:URL,sourceKind:"OFFICIAL_GOV",fetchedAt:new Date().toISOString(),dataStatus:"LIVE_PARSED",rows,totals:{shipCalls:sum("shipCalls"),cargoTons:sum("cargoTons"),containerTeu:sum("containerTeu"),authorities:rows.length},note:"Official VIMAWA table. Values are displayed in the source scope; no interpolation or terminal allocation."};
+    return {provider:"VIMAWA",sourceUrl:URL,sourceKind:"OFFICIAL_GOV",fetchedAt:new Date().toISOString(),dataStatus:"LIVE_PARSED",rows,totals:{shipCalls:sum("shipCalls"),cargoTons:sum("cargoTons"),containerTeu:sum("containerTeu"),authorities:rows.length},note:"Official VIMAWA table. Zero TEU is preserved as a reported zero (not missing): cargo may be bulk, liquid or non-containerized. Null means missing/unparsed. No interpolation or terminal allocation."};
   }catch(e){return {provider:"VIMAWA",sourceUrl:URL,sourceKind:"OFFICIAL_GOV",fetchedAt:new Date().toISOString(),dataStatus:"SOURCE_UNAVAILABLE",rows:[],totals:{shipCalls:null,cargoTons:null,containerTeu:null,authorities:0},note:e instanceof Error?e.message:String(e)};}
 }
 export function getNationalPortSourceRegistry(){return {data:[
