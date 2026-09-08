@@ -13,7 +13,7 @@ import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from 
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import { getPortOverview, getPortSources, getPortCompanyPortfolio } from "./providers/industry/ports.js";
 import { getNationalPortStats, getNationalPortSourceRegistry } from "./providers/industry/portsNational.js";
-import { fetchVimawaHistorical, getNationalPortDashboard, getQuangNinhMovements, getQuyNhonStatus, getPortSourceHealth } from "./providers/industry/portsNationalHistory.js";
+import { fetchVimawaHistorical, getNationalPortDashboard, ingestNationalPortStats, getQuangNinhMovements, getQuyNhonStatus, getPortSourceHealth } from "./providers/industry/portsNationalHistory.js";
 import {
   backfillHaiphongChunk,
   bootstrapHaiphongIfNeeded,
@@ -389,9 +389,14 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
   }
 
   if (url.pathname === "/api/industry/ports/national-history") return json(await fetchVimawaHistorical(12));
-  if (url.pathname === "/api/industry/ports/national-dashboard") return json(await getNationalPortDashboard(24));
+  if (url.pathname === "/api/industry/ports/national-dashboard") return json(await getNationalPortDashboard(env.DB, 36));
   if (url.pathname === "/api/industry/ports/quangninh/movements") return json(await getQuangNinhMovements());
   if (url.pathname === "/api/industry/ports/quynhon/status") return json(await getQuyNhonStatus());
+  if (url.pathname === "/api/industry/ports/national-dashboard/refresh") {
+    const token = request.headers.get("x-port-admin-token");
+    if (!env.PORT_ADMIN_TOKEN || token !== env.PORT_ADMIN_TOKEN) return json({ error: "Unauthorized" }, 401);
+    return json(await ingestNationalPortStats(env.DB, 36));
+  }
   if (url.pathname === "/api/industry/ports/source-health") return json(await getPortSourceHealth());
 
   if (url.pathname === "/api/industry/ports/overview") {
@@ -705,6 +710,8 @@ export default {
           await cleanup(env.DB);
           try { await backfillHaiphongChunk(env.DB, 21); }
           catch (e) { console.error("Port history backfill chunk failed", e); }
+          try { await ingestNationalPortStats(env.DB, 36); }
+          catch (e) { console.error("VIMAWA national ingest failed", e); }
           await logCron(env.DB, "cleanup", true);
         } catch (e) {
           await logCron(env.DB, "cleanup", false, e instanceof Error ? e.message : String(e));

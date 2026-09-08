@@ -101,3 +101,48 @@ Dữ liệu quan trọng nhất phục vụ phân tích xu hướng biên lợi 
   ├── Frontend: Next.js + Tailwind CSS
   └── Charts / Maps: Leaflet.js / Mapbox GL + TradingView Lightweight Charts
 ```
+---
+
+## 6. V8.18.2 — Source Registry đã kiểm chứng và thứ tự ưu tiên
+
+> Nguyên tắc production: **official government → official port/operator → industry association → commercial API → reference-only**. Một nguồn chỉ được dùng làm KPI chính khi parser/field/scope đã được validate; nếu không, UI phải để trống hoặc gắn `PARTIAL`.
+
+| Tier | Nguồn | Vai trò production | Update | Trạng thái V8.18.2 |
+|---|---|---|---|---|
+| A | **VIMAWA – Thống kê** `https://vimawa.gov.vn/vi/thong-ke` | National cargo/TEU; export/import/domestic/transit; YTD & prior-YTD | tháng | **PRIMARY** |
+| A | **Cảng vụ HH Hải Phòng – CSDL kế hoạch tàu** `https://csdltau.cangvuhaiphong.gov.vn/pages/ship_plan.aspx` | Ship plan, DWT, GT, LOA, draft, terminal, origin/destination, agent | ngày | **PRODUCTION** |
+| A | **Cảng vụ HH Quảng Ninh** `https://kht1.cangvuhanghaiquangninh.gov.vn/` | Movement plan / vessel dimensions | ngày | **PARSER CANDIDATE** |
+| A | **Cảng vụ HH Quy Nhơn** `https://cangvuhanghaiquynhon.gov.vn/` | Daily movement-plan archive | ngày | **PARTIAL** (detail có thể image) |
+| B | Website/operator official (Gemadept, PHP, SNP...) | Capacity, ownership, terminal profile, tariff, corporate disclosure | event/periodic | **PRIMARY cho asset/company** |
+| C | **Vietnam Seaports Association (VPA)** `https://www.vpa.org.vn/` | Historical port throughput/calls/capacity cross-check | năm | **SECONDARY/CROSS-CHECK** |
+| D | AISStream / Datalastic / commercial freight APIs | supplementary realtime AIS / vessel enrichment | realtime | **OPTIONAL; không phải national throughput source** |
+| E | MarineTraffic / VesselFinder / TradingView widgets | visual/reference | realtime | **REFERENCE ONLY** |
+
+### VIMAWA workbook policy
+
+VIMAWA có thể phát hành workbook kết hợp **Hàng hải và Đường thủy** và dùng header merge nhiều dòng. Parser không được map một cell đơn lẻ thành YTD/cùng kỳ. V8.18.2 reconstruct merged cells + multi-row header trước khi semantic mapping.
+
+Normalized metrics hợp lệ:
+
+- `TOTAL`
+- `CONTAINER`
+- `EXPORT`
+- `IMPORT`
+- `DOMESTIC`
+- `TRANSIT`
+
+Normalized periods:
+
+- `YTD` = lũy kế từ đầu năm đến hết tháng báo cáo.
+- `PRIOR_YTD` = lũy kế cùng kỳ năm trước trong **cùng workbook/report**.
+- `MONTHLY` = `YTD(m) - YTD(m-1)` chỉ khi hai report liên tiếp cùng metric/unit/scope.
+- `MONTHLY_YOY` = monthly current year / monthly prior year - 1.
+
+Không có đủ kỳ liên tiếp → `UNAVAILABLE`; không nội suy.
+
+### Storage policy
+
+- Raw source URL/report registry: `port_national_report_registry`.
+- Normalized national statistics: `port_national_statistics`.
+- Source health: `port_source_health`.
+- D1 chỉ lưu normalized records + provenance; raw XLSX/PDF nên chuyển sang R2 khi product hóa để audit/reparse.
