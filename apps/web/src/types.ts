@@ -511,3 +511,7 @@ export type NationalPortStatsResponse = { provider:"VIMAWA"; sourceUrl:string; s
 
 export type NationalPortHistoryResponse={provider:"VIMAWA";status:"PARSED"|"PARTIAL";reports:Array<{title:string;period:string|null;publishedDate:string|null;pageUrl:string;xlsxUrl:string|null}>;points:Array<{period:string;metric:string;label:string;values:number[];sourceUrl:string;publishedDate:string|null}>;note:string;serverTime:string};
 export type PortSourceHealthResponse={data:{vimawa:{status:string;latestPeriod:string|null};quangninh:{status:string};quynhon:{status:string}};serverTime:string};
+
+export type NationalDashboardMetric="TOTAL"|"EXPORT"|"IMPORT"|"DOMESTIC"|"TRANSIT"|"CONTAINER";
+export type NationalDashboardPoint={period:string;metric:NationalDashboardMetric;label:string;unit:string|null;ytd:number|null;priorYtd:number|null;yoyPct:number|null;sourceUrl:string;publishedDate:string|null;status:"OFFICIAL"};
+export type NationalPortDashboardResponse={provider:"VIMAWA";sourceKind:"OFFICIAL_GOV";sourceUrl:string;status:"NORMALIZED"|"PARTIAL";latestPeriod:string|null;latest:NationalDashboardPoint[];series:NationalDashboardPoint[];reports:Array<{title:string;period:string|null;publishedDate:string|null;pageUrl:string;xlsxUrl:string|null}>;note:string;serverTime:string};

@@ -25,6 +25,48 @@ function parseWorkbook(buf:ArrayBuffer,report:VimawaReport){const wb=XLSX.read(b
 export async function fetchVimawaHistorical(limit=12){const reports=await discoverVimawaReports(limit);const points:any[]=[];for(const report of reports){if(!report.xlsxUrl||!report.period)continue;try{const r=await fetch(report.xlsxUrl,{headers:UA});if(!r.ok)continue;const parsed=parseWorkbook(await r.arrayBuffer(),report);for(const m of parsed.metrics)points.push({period:report.period,metric:m.metric,label:m.label,values:m.values,sourceUrl:report.pageUrl,publishedDate:report.publishedDate});}catch{}}
  return {provider:"VIMAWA",status:points.length?"PARSED":"PARTIAL",reports,points,note:"Raw official XLSX rows are preserved as numeric arrays because VIMAWA workbook layouts vary by period. No guessed column mapping is applied.",serverTime:new Date().toISOString()};}
 
+
+export type NationalDashboardPoint={
+  period:string; metric:"TOTAL"|"EXPORT"|"IMPORT"|"DOMESTIC"|"TRANSIT"|"CONTAINER";
+  label:string; unit:string|null; ytd:number|null; priorYtd:number|null; yoyPct:number|null;
+  sourceUrl:string; publishedDate:string|null; status:"OFFICIAL";
+};
+const norm=(v:unknown)=>txt(v).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d");
+function metricOf(label:string):NationalDashboardPoint["metric"]|null{const z=norm(label);if(z.includes("container"))return"CONTAINER";if(z.includes("xuat khau"))return"EXPORT";if(z.includes("nhap khau"))return"IMPORT";if(z.includes("noi dia"))return"DOMESTIC";if(z.includes("qua canh"))return"TRANSIT";if(z.includes("tong so"))return"TOTAL";return null}
+function normalizedWorkbook(buf:ArrayBuffer,report:VimawaReport):NationalDashboardPoint[]{
+ const wb=XLSX.read(buf,{type:"array"}); const out:NationalDashboardPoint[]=[];
+ for(const name of wb.SheetNames){
+  const rows:any[][]=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});
+  let ytdCol=-1,priorCol=-1,yoyCol=-1;
+  for(let ri=0;ri<Math.min(rows.length,30);ri++) for(let ci=0;ci<(rows[ri]?.length??0);ci++){
+   const z=norm(rows[ri][ci]);
+   if(z.includes("luy ke tu dau nam")&&z.includes("thang bao cao")) ytdCol=ci;
+   if(z.includes("luy ke cung ky nam truoc")) priorCol=ci;
+   if(z.includes("so sanh cung ky")||z.includes("4/5")) yoyCol=ci;
+  }
+  if(ytdCol<0||priorCol<0) continue;
+  for(const row of rows){
+   const labelCell=row.find(v=>metricOf(txt(v))!==null); if(labelCell==null)continue;
+   const metric=metricOf(txt(labelCell)); if(!metric)continue;
+   const labelIndex=row.indexOf(labelCell); const unit=labelIndex>=0?txt(row[labelIndex+1])||null:null;
+   const ytd=n(row[ytdCol]), prior=n(row[priorCol]); let yoy=yoyCol>=0?n(row[yoyCol]):null;
+   if(yoy!=null && yoy>0 && yoy<3) yoy=(yoy-1)*100; else if(yoy!=null && yoy>3) yoy=yoy-100;
+   if(yoy==null&&ytd!=null&&prior!=null&&prior!==0)yoy=(ytd/prior-1)*100;
+   if(ytd==null&&prior==null)continue;
+   out.push({period:report.period!,metric,label:txt(labelCell),unit,ytd,priorYtd:prior,yoyPct:yoy,sourceUrl:report.pageUrl,publishedDate:report.publishedDate,status:"OFFICIAL"});
+  }
+ }
+ return [...new Map(out.map(x=>[`${x.period}:${x.metric}`,x])).values()];
+}
+export async function getNationalPortDashboard(limit=24){
+ const reports=await discoverVimawaReports(limit); const points:NationalDashboardPoint[]=[];
+ for(const report of reports){if(!report.xlsxUrl||!report.period)continue;try{const r=await fetch(report.xlsxUrl,{headers:UA});if(!r.ok)continue;points.push(...normalizedWorkbook(await r.arrayBuffer(),report));}catch{}}
+ points.sort((a,b)=>a.period.localeCompare(b.period));
+ const periods=[...new Set(points.map(x=>x.period))]; const latestPeriod=periods.at(-1)??reports.find(x=>x.period)?.period??null;
+ const latest=latestPeriod?points.filter(x=>x.period===latestPeriod):[];
+ return {provider:"VIMAWA",sourceKind:"OFFICIAL_GOV",sourceUrl:STATS_URL,status:points.length?"NORMALIZED":"PARTIAL",latestPeriod,latest,series:points,reports:reports.map(x=>({title:x.title,period:x.period,publishedDate:x.publishedDate,pageUrl:x.pageUrl,xlsxUrl:x.xlsxUrl})),note:points.length?"Normalized only when official workbook headers for YTD and prior-year YTD are explicitly recognized. No guessed values are emitted.":"Official reports were discovered, but workbook headers were not safely normalized. UI must show missing data instead of fallback numbers.",serverTime:new Date().toISOString()};
+}
+
 export async function getQuangNinhMovements(){try{const r=await fetch(QN_URL,{headers:UA});if(!r.ok)throw new Error(`HTTP ${r.status}`);const $=cheerio.load(await r.text());const rows:any[]=[];$("tr").each((_,tr)=>{const c=$(tr).find("td").map((__,td)=>txt($(td).text())).get();if(c.length<7)return;const joined=c.join(" ");if(!/\d/.test(joined))return;const dwt=c.map(n).find(x=>x!==null&&x>1000)??null;rows.push({cells:c,dwt});});return {source:"Cảng vụ Hàng hải Quảng Ninh",sourceUrl:QN_URL,status:rows.length?"LIVE_PARSED":"PARTIAL",rows,serverTime:new Date().toISOString(),note:"Official movement-plan rows. Raw cells retained; terminal-field normalization is intentionally conservative."};}catch(e){return {source:"Cảng vụ Hàng hải Quảng Ninh",sourceUrl:QN_URL,status:"SOURCE_UNAVAILABLE",rows:[],serverTime:new Date().toISOString(),note:e instanceof Error?e.message:String(e)}}}
 export async function getQuyNhonStatus(){try{const r=await fetch(QNHON_URL,{headers:UA});if(!r.ok)throw new Error(`HTTP ${r.status}`);const $=cheerio.load(await r.text());const reports:string[]=[];$("a").each((_,a)=>{const t=txt($(a).text());if(/KẾ HOẠCH ĐIỀU ĐỘNG TÀU NGÀY/i.test(t))reports.push(t)});return {source:"Cảng vụ Hàng hải Quy Nhơn",sourceUrl:QNHON_URL,status:reports.length?"PARTIAL":"SOURCE_UNAVAILABLE",reportCount:reports.length,reports:reports.slice(0,20),note:"Archive discovery only. Detail rows are image-based on sampled reports, so V8.17 does not OCR them into official structured data.",serverTime:new Date().toISOString()};}catch(e){return {source:"Cảng vụ Hàng hải Quy Nhơn",sourceUrl:QNHON_URL,status:"SOURCE_UNAVAILABLE",reportCount:0,reports:[],note:e instanceof Error?e.message:String(e),serverTime:new Date().toISOString()}}}
 export async function getPortSourceHealth(){const settled=await Promise.allSettled([discoverVimawaReports(3),getQuangNinhMovements(),getQuyNhonStatus()]);return {data:{vimawa:{status:settled[0].status==="fulfilled"&&settled[0].value.length?"OK":"ERROR",latestPeriod:settled[0].status==="fulfilled"?settled[0].value[0]?.period:null},quangninh:{status:settled[1].status==="fulfilled"?settled[1].value.status:"ERROR"},quynhon:{status:settled[2].status==="fulfilled"?settled[2].value.status:"ERROR"}},serverTime:new Date().toISOString()};}

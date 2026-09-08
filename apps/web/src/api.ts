@@ -198,3 +198,5 @@ export async function getNationalPortHistory(){ const r=await fetch(`${BASE}/api
 export async function getPortSourceHealth(){ const r=await fetch(`${BASE}/api/industry/ports/source-health`,{cache:"no-store"}); if(!r.ok) throw new Error(`Port source health HTTP ${r.status}`); return r.json(); }
 export async function getQuangNinhMovements(){ const r=await fetch(`${BASE}/api/industry/ports/quangninh/movements`,{cache:"no-store"}); if(!r.ok) throw new Error(`Quang Ninh movements HTTP ${r.status}`); return r.json(); }
 export async function getQuyNhonStatus(){ const r=await fetch(`${BASE}/api/industry/ports/quynhon/status`,{cache:"no-store"}); if(!r.ok) throw new Error(`Quy Nhon status HTTP ${r.status}`); return r.json(); }
+
+export async function getNationalPortDashboard(){ const r=await fetch(`${BASE}/api/industry/ports/national-dashboard`,{cache:"no-store"}); if(!r.ok) throw new Error(`National port dashboard HTTP ${r.status}`); return r.json(); }

@@ -13,7 +13,7 @@ import { getMarketIndexes, getStockChart, getStockDetail, getStockQuotes } from 
 import { getRealtimeSnapshots } from "./providers/stocks/vndirectRealtime.js";
 import { getPortOverview, getPortSources, getPortCompanyPortfolio } from "./providers/industry/ports.js";
 import { getNationalPortStats, getNationalPortSourceRegistry } from "./providers/industry/portsNational.js";
-import { fetchVimawaHistorical, getQuangNinhMovements, getQuyNhonStatus, getPortSourceHealth } from "./providers/industry/portsNationalHistory.js";
+import { fetchVimawaHistorical, getNationalPortDashboard, getQuangNinhMovements, getQuyNhonStatus, getPortSourceHealth } from "./providers/industry/portsNationalHistory.js";
 import {
   backfillHaiphongChunk,
   bootstrapHaiphongIfNeeded,
@@ -71,7 +71,7 @@ function json(data: unknown, status = 200) {
 }
 
 async function worldQuote(env: Env, ctx: ExecutionContext): Promise<WorldGoldQuote> {
-  const cache = caches.default;
+  const cache = (caches as unknown as { default: Cache }).default;
   const cacheKey = new Request("https://gold-tracker.internal/cache/world");
   const cached = await cache.match(cacheKey);
 
@@ -389,6 +389,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext) {
   }
 
   if (url.pathname === "/api/industry/ports/national-history") return json(await fetchVimawaHistorical(12));
+  if (url.pathname === "/api/industry/ports/national-dashboard") return json(await getNationalPortDashboard(24));
   if (url.pathname === "/api/industry/ports/quangninh/movements") return json(await getQuangNinhMovements());
   if (url.pathname === "/api/industry/ports/quynhon/status") return json(await getQuyNhonStatus());
   if (url.pathname === "/api/industry/ports/source-health") return json(await getPortSourceHealth());
