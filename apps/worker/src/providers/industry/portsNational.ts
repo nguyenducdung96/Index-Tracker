@@ -9,7 +9,7 @@ export type NationalPortStatsResponse = {
   totals:{shipCalls:number|null;cargoTons:number|null;containerTeu:number|null;authorities:number};
   note:string;
 };
-const URL="https://vimawa.gov.vn/vi/node/7456";
+const URL="https://vimawa.gov.vn/vi/noi-dung/tau-thuyen-ra-vao-cang-bien";
 function clean(s:string){return s.replace(/<[^>]+>/g," ").replace(/&nbsp;|&#160;/g," ").replace(/&amp;/g,"&").replace(/\s+/g," ").trim()}
 function num(s:string):number|null { const x=clean(s).replace(/\./g,"").replace(/,/g,""); if(!x||!/^-?\d+(\.\d+)?$/.test(x))return null; const n=Number(x); return Number.isFinite(n)?n:null; }
 export async function getNationalPortStats():Promise<NationalPortStatsResponse>{
